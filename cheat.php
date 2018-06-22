@@ -67,13 +67,16 @@ do
 }
 while( !$CurrentPlanet && sleep( 5 ) === 0 );
 
-// Leave current game before trying to switch planets (it will report InvalidState otherwise)
-LeaveCurrentGame( $Token, true, $ClanId );
+do
+{
+	// Leave current game before trying to switch planets (it will report InvalidState otherwise)
+	LeaveCurrentGame( $Token, true, $ClanId );
 
-SendPOST( 'ITerritoryControlMinigameService/JoinPlanet', 'id=' . $CurrentPlanet . '&access_token=' . $Token );
+	SendPOST( 'ITerritoryControlMinigameService/JoinPlanet', 'id=' . $CurrentPlanet . '&access_token=' . $Token );
 
-// Set the planet to what Steam thinks is the active one, even though we sent JoinPlanet request
-$CurrentPlanet = LeaveCurrentGame( $Token, false, $ClanId );
+	$SteamThinksPlanet = LeaveCurrentGame( $Token, false, $ClanId );
+}
+while( $CurrentPlanet !== $SteamThinksPlanet );
 
 do
 {
@@ -86,6 +89,9 @@ do
 
 		goto lol_using_goto_in_2018;
 	}
+
+	// Some users get stuck in games after calling ReportScore, so we manually leave to fix this
+	LeaveCurrentGame( $Token, false, $ClanId );
 
 	do
 	{
@@ -159,8 +165,8 @@ do
 		$Data = $Data[ 'response' ];
 
 		Msg(
-			'>> Score: {lightred}' . number_format( $Data[ 'old_score' ] ) . '{normal} XP => {lightblue}' . number_format( $Data[ 'new_score' ] ) .
-			'{normal} XP - Current level: {lightblue}' . $Data[ 'new_level' ] .
+			'>> Score: {lightred}' . number_format( $Data[ 'old_score' ] ) . '{normal} XP => {green}' . number_format( $Data[ 'new_score' ] ) .
+			'{normal} XP - Current level: {green}' . $Data[ 'new_level' ] .
 			'{normal} (' . number_format( $Data[ 'new_score' ] / $Data[ 'next_level_score' ] * 100, 2 ) . '%)'
 		);
 		
@@ -349,8 +355,6 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet, $ClanId )
 	}
 	while( true );
 
-	Msg( 'Current level is {yellow}' . $Data[ 'response' ][ 'level' ] . '{normal} with score of {yellow}' . $Data[ 'response' ][ 'score' ] );
-
 	if( isset( $Data[ 'response' ][ 'active_zone_game' ] ) )
 	{
 		SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_zone_game' ] );
@@ -466,7 +470,6 @@ function Msg( $Message, $EOL = PHP_EOL )
 			'{green}',
 			'{yellow}',
 			'{lightred}',
-			'{lightblue}',
 			'{grey}',
 		],
 		[
@@ -474,7 +477,6 @@ function Msg( $Message, $EOL = PHP_EOL )
 			"\033[0;32m",
 			"\033[1;33m",
 			"\033[1;31m",
-			"\033[1;34m",
 			"\033[0;36m",
 		],
 	$Message, $Count );
