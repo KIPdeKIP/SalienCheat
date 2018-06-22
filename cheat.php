@@ -170,7 +170,7 @@ do
 			'{normal} (' . number_format( $Data[ 'new_score' ] / $Data[ 'next_level_score' ] * 100, 2 ) . '%)'
 		);
 		
-		$Time = ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => 3 ] ) * 2;
+		$Time = ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => 3 ] ) * ( 110 / 60 );
 		$Hours = floor( $Time / 60 );
 		$Minutes = $Time % 60;
 		
