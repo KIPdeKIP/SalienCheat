@@ -150,7 +150,7 @@ do
 		);
 	}
 
-	sleep( 120 );
+	sleep( 110 );
 	
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
