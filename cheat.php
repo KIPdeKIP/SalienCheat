@@ -16,8 +16,6 @@ if( !is_string( $ClanId ) )
 	$ClanId = '4777282'; // steamdb
 }
 
-Msg('Clan: ' . $ClanId );
-
 if( $argc === 2 )
 {
 	$Token = $argv[ 1 ];
