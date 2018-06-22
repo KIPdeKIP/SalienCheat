@@ -9,6 +9,14 @@ if( !file_exists( __DIR__ . '/cacert.pem' ) )
 }
 
 $EnvToken = getenv('TOKEN');
+$ClanId = getenv('CLAN_ID');
+
+if( !is_string( $ClanId ) )
+{
+	$ClanId = '4777282'; // steamdb
+}
+
+Msg('Clan: ' . $ClanId );
 
 if( $argc === 2 )
 {
@@ -63,12 +71,12 @@ do
 while( !$CurrentPlanet && sleep( 5 ) === 0 );
 
 // Leave current game before trying to switch planets (it will report InvalidState otherwise)
-LeaveCurrentGame( $Token, true );
+LeaveCurrentGame( $Token, true, $ClanId );
 
 SendPOST( 'ITerritoryControlMinigameService/JoinPlanet', 'id=' . $CurrentPlanet . '&access_token=' . $Token );
 
 // Set the planet to what Steam thinks is the active one, even though we sent JoinPlanet request
-$CurrentPlanet = LeaveCurrentGame( $Token, false );
+$CurrentPlanet = LeaveCurrentGame( $Token, false, $ClanId );
 
 do
 {
@@ -302,17 +310,15 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 	}
 }
 
-function LeaveCurrentGame( $Token, $LeaveCurrentPlanet )
+function LeaveCurrentGame( $Token, $LeaveCurrentPlanet, $ClanId )
 {
 	do
 	{
 		$Data = SendPOST( 'ITerritoryControlMinigameService/GetPlayerInfo', 'access_token=' . $Token );
 
-		if( !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) || $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] != 4777282 )
+		if( !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) || $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] != $ClanId )
 		{
-			// Please do not change our clanid if you are going to use this script
-			// If you want to cheat for your own group, come up with up with your own approach, thank you
-			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=4777282&access_token=' . $Token );
+			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=' . $ClanId . '&access_token=' . $Token );
 		}
 		else
 		{
