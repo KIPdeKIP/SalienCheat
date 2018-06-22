@@ -215,6 +215,8 @@ do
 			'{normal} XP - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) .
 			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
+		
+		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Data[ 'next_level_score' ] );
 	}
 }
 while( true );
@@ -267,6 +269,19 @@ function GetNextLevelProgress( $Data )
 	}
 
 	return ( $Data[ 'new_score' ] - $ScoreTable[ $PreviousLevel ] ) / ( $Data[ 'next_level_score' ] - $ScoreTable[ $PreviousLevel ] );
+}
+
+function SetTitle( $Level, $Score, $NextLevelScore )
+{
+	$Time = ( $NextLevelScore - $Score ) / GetScoreForZone( [ 'difficulty' => 3 ] ) * 2;
+	$Hours = floor( $Time / 60 );
+	$Minutes = $Time % 60;
+
+	@cli_set_process_title(
+		'Level ' . $Level .
+		' (' . number_format( $Score ) . ' XP)' .
+		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm'
+	);
 }
 
 function GetScoreForZone( $Zone )
@@ -596,6 +611,8 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 		}
 	}
 	while( !isset( $Data[ 'response' ][ 'score' ] ) );
+
+	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Data[ 'response' ][ 'next_level_score' ] );
 
 	if( !isset( $Data[ 'response' ][ 'active_planet' ] ) )
 	{
