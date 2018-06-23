@@ -302,7 +302,7 @@ function GetFirstAvailableZone( $Planet )
 	{
 		if( $b[ 'difficulty' ] === $a[ 'difficulty' ] )
 		{
-			return $b[ 'zone_position' ] - $a[ 'zone_position' ];
+			return rand( -1, 1 );
 		}
 		
 		return $b[ 'difficulty' ] - $a[ 'difficulty' ];
