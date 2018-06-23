@@ -1,4 +1,4 @@
-"""Plays SALIENT for you
+"""Plays SALIEN for you
 
 pip install requests tqdm
 """
@@ -108,13 +108,13 @@ class Saliens(requests.Session):
                     raise Exception("No response is json")
             except Exception as exp:
                 self.log("spost error: %s", str(exp))
-                if retry:
-                    sleep(1)
             else:
                 data = rdata['response']
 
             if not retry:
                 break
+
+            sleep(1)
 
         return data
 
@@ -132,13 +132,13 @@ class Saliens(requests.Session):
                     raise Exception("No response is json")
             except Exception as exp:
                 self.log("spost error: %s", str(exp))
-                if retry:
-                    sleep(1)
             else:
                 data = rdata['response']
 
             if not retry:
                 break
+
+            sleep(1)
 
         return data
 
@@ -180,21 +180,25 @@ class Saliens(requests.Session):
             planet['easy_zones'] = sorted((z for z in planet['zones']
                                            if (not z['captured']
                                                and z['difficulty'] == 1
-                                               and z['capture_progress'] < 0.95)),
+                                               and z.get('capture_progress', 0) < 0.95)),
                                           reverse=True,
                                           key=lambda x: x['zone_position'])
 
             planet['medium_zones'] = sorted((z for z in planet['zones']
                                              if (not z['captured']
                                                  and z['difficulty'] == 2
-                                                 and z['capture_progress'] < 0.95)),
+                                                 and z.get('capture_progress', 0) < 0.95)),
                                             reverse=True,
                                             key=lambda x: x['zone_position'])
 
             planet['hard_zones'] = sorted((z for z in planet['zones']
                                            if (not z['captured']
                                                and z['difficulty'] == 3
-                                               and z['capture_progress'] < 0.95)),
+                                               and z.get('capture_progress', 0) < 0.95)),
+                                          reverse=True,
+                                          key=lambda x: x['zone_position'])
+            planet['boss_zones'] = sorted((z for z in planet['zones']
+                                           if not z['captured'] and z['type'] == 4),
                                           reverse=True,
                                           key=lambda x: x['zone_position'])
 
@@ -207,9 +211,11 @@ class Saliens(requests.Session):
             if len(planet['easy_zones']):
                 sort_key += 99 - len(planet['easy_zones'])
             if len(planet['medium_zones']):
-                sort_key += 100 * (99 - len(planet['medium_zones']))
+                sort_key += 10**2 * (99 - len(planet['medium_zones']))
             if len(planet['hard_zones']):
-                sort_key += 10000 * (99 - len(planet['hard_zones']))
+                sort_key += 10**4 * (99 - len(planet['hard_zones']))
+            if len(planet['boss_zones']):
+                sort_key += 10**6 * (99 - len(planet['boss_zones']))
 
             planet['sort_key'] = sort_key
 
@@ -404,6 +410,7 @@ try:
         planet_name = game.planet['state']['name']
         curr_players = game.planet['state']['current_players']
         giveaway_appds = game.planet['giveaway_apps']
+        n_boss = len(game.planet['boss_zones'])
         n_hard = len(game.planet['hard_zones'])
         n_med = len(game.planet['medium_zones'])
         n_easy = len(game.planet['easy_zones'])
@@ -411,11 +418,14 @@ try:
         game.log("Planet name: %s (%s)", planet_name, planet_id)
         game.log("Current players: %s", curr_players)
         game.log("Giveaway AppIDs: %s", giveaway_appds)
-        game.log("Zones: %s hard, %s medium, %s easy", n_hard, n_med, n_easy)
+        game.log("Zones: %s boss, %s hard, %s medium, %s easy", n_boss, n_hard, n_med, n_easy)
 
         # zone
         while game.planet and game.planet['id'] == planets[0]['id']:
-            zones = game.planet['hard_zones'] + game.planet['medium_zones'] + game.planet['easy_zones']
+            zones = (game.planet['boss_zones']
+                     + game.planet['hard_zones']
+                     + game.planet['medium_zones']
+                     + game.planet['easy_zones'])
 
             if not zones:
                 game.log("No open zones left on planet")
@@ -432,18 +442,23 @@ try:
                 3: 'hard',
                 }
 
-            game.log("Selecting zone %s (%s)....", zone_id, dmap.get(difficulty, difficulty))
+            game.log("Selecting %szone %s (%s)....",
+                     'boss ' if game.planet['zones'][zone_id]['type'] == 4 else '',
+                     zone_id,
+                     dmap.get(difficulty, difficulty),
+                     )
 
             while (game.planet
                    and time() < deadline
                    and not game.planet['zones'][zone_id]['captured']
-                   and game.planet['zones'][zone_id]['capture_progress'] < 0.95):
+                   and game.planet['zones'][zone_id].get('capture_progress', 0) < 0.95):
 
                 if ('clan_info' not in game.player_info
                    or game.player_info['clan_info']['accountid'] != 4777282):
                     game.represent_clan(4777282)
 
-                game.log("Fighting in zone %s (%s) for 110sec",
+                game.log("Fighting in %szone %s (%s) for 110sec",
+                         'boss ' if game.planet['zones'][zone_id]['type'] == 4 else '',
                          zone_id,
                          dmap.get(difficulty, difficulty))
 
