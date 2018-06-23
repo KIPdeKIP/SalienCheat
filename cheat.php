@@ -51,9 +51,6 @@ if( strlen( $Token ) !== 32 )
 	exit( 1 );
 }
 
-Msg( '{green}This script will not work until you have joined our group:' );
-Msg( '{yellow}https://steamcommunity.com/groups/SteamDB', PHP_EOL . PHP_EOL );
-
 $SkippedPlanets = [];
 $CurrentPlanetName = '??';
 
