@@ -245,7 +245,7 @@ function GetFirstAvailableZone( $Planet )
 
 		// If a zone is close to completion, skip it because Valve does not reward points
 		// and replies with 42 NoMatch instead
-		if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.95 )
+		if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.97 )
 		{
 			continue;
 		}
@@ -301,7 +301,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 
 		foreach( $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ] as $Zone )
 		{
-			if( !$Zone[ 'captured' ] && ( empty( $Zone[ 'capture_progress' ] ) || $Zone[ 'capture_progress' ] < 0.95 ) )
+			if( !$Zone[ 'captured' ] && ( empty( $Zone[ 'capture_progress' ] ) || $Zone[ 'capture_progress' ] < 0.97 ) )
 			{
 				if( $Zone[ 'difficulty' ] === 3)
 				{
