@@ -49,6 +49,7 @@ $WaitTime = 110;
 $KnownPlanets = [];
 $SkippedPlanets = [];
 $CurrentPlanetName = '??';
+$LastZone = ['', 0.0];
 
 lol_using_goto_in_2018:
 
@@ -88,7 +89,7 @@ do
 
 	do
 	{
-		$Zone = GetFirstAvailableZone( $CurrentPlanet );
+		$Zone = GetFirstAvailableZone( $CurrentPlanet, $LastZone );
 	}
 	while( $Zone === null && sleep( 5 ) === 0 );
 
@@ -150,7 +151,7 @@ do
 
 	Msg(
 		'>> Zone {green}' . $Zone[ 'zone_position' ] .
-		'{normal} - Captured: {yellow}' . number_format( empty( $Zone[ 'capture_progress' ] ) ? 0 : ( $Zone[ 'capture_progress' ] * 100 ), 2 ) . '%' .
+		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
 	);
 
@@ -233,7 +234,7 @@ function GetNameForDifficulty( $Zone )
 	return $Boss . $Difficulty;
 }
 
-function GetFirstAvailableZone( $Planet )
+function GetFirstAvailableZone( $Planet, &$LastZone )
 {
 	$Zones = SendGET( 'ITerritoryControlMinigameService/GetPlanet', 'id=' . $Planet . '&language=english' );
 
@@ -255,6 +256,11 @@ function GetFirstAvailableZone( $Planet )
 	
 	foreach( $Zones as $Zone )
 	{
+		if( empty( $Zone[ 'capture_progress' ] ) )
+		{
+			$Zone[ 'capture_progress' ] = 0.0;
+		}
+
 		if( $Zone[ 'captured' ] )
 		{
 			continue;
@@ -270,9 +276,20 @@ function GetFirstAvailableZone( $Planet )
 			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
 
+		$PaceCutoff = 0.97;
+
+		if( $LastZone[ 0 ] === $Planet . '.' . $Zone[ 'zone_position' ] )
+		{
+			$PaceCutoff = $Zone[ 'capture_progress' ] - $LastZone[ 1 ];
+
+			Msg( '-- Current pace for Zone {green}' . $Zone[ 'zone_position' ] . '{normal} is {green}+' . number_format( $PaceCutoff * 100, 2 ) . '%' );
+
+			$PaceCutoff = 0.95 - $PaceCutoff;
+		}
+
 		// If a zone is close to completion, skip it because Valve does not reward points
 		// and replies with 42 NoMatch instead
-		if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.97 )
+		if( $Zone[ 'capture_progress' ] > $PaceCutoff )
 		{
 			continue;
 		}
@@ -308,6 +325,12 @@ function GetFirstAvailableZone( $Planet )
 	$Zone[ 'easy_zones' ] = $EasyZones;
 	$Zone[ 'planet_captured' ] = $PlanetCaptured;
 	$Zone[ 'planet_players' ] = $PlanetPlayers;
+
+	$LastZone =
+	[
+		$Planet . '.' . $Zone[ 'zone_position' ],
+		$Zone[ 'capture_progress' ]
+	];
 
 	return $Zone;
 }
