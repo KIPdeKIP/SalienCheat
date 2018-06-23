@@ -341,7 +341,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 		return $b[ 'hard_zones' ] - $a[ 'hard_zones' ];
 	} );
 
-	foreach( $Planets as $Planet )
+	foreach( $Planets as &$Planet )
 	{
 		if( isset( $SkippedPlanets[ $Planet[ 'id' ] ] ) )
 		{
