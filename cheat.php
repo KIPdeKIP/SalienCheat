@@ -329,7 +329,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 			return $b[ 'medium_zones' ] - $a[ 'medium_zones' ];
 		}
 		
-		return $a[ 'hard_zones' ] - $b[ 'hard_zones' ];
+		return $b[ 'hard_zones' ] - $a[ 'hard_zones' ];
 	} );
 
 	foreach( $Planets as $Planet )
