@@ -110,6 +110,7 @@ do
 
 	// Find a new planet if there are no hard zones left
 	$HardZones = $Zone[ 'hard_zones' ];
+	$MediumZones = $Zone[ 'medium_zones' ];
 	$PlanetCaptured = $Zone[ 'planet_captured' ];
 	$PlanetPlayers = $Zone[ 'planet_players' ];
 
@@ -137,7 +138,8 @@ do
 		'>> Planet {green}' . $CurrentPlanet . ' (' . $CurrentPlanetName . ')' .
 		'{normal} - Players: {yellow}' . number_format( $PlanetPlayers ) .
 		'{normal} - Captured: {yellow}' . number_format( $PlanetCaptured * 100, 2 ) . '%' .
-		'{normal} - Hard zones: {yellow}' . $HardZones
+		'{normal} - Hard zones: {yellow}' . $HardZones .
+		'{normal} - Medium zones: {yellow}' . $MediumZones
 	);
 
 	Msg(
@@ -212,6 +214,7 @@ function GetFirstAvailableZone( $Planet )
 	$Zones = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ];
 	$CleanZones = [];
 	$HardZones = 0;
+	$MediumZones = 0;
 	
 	foreach( $Zones as $Zone )
 	{
@@ -223,6 +226,11 @@ function GetFirstAvailableZone( $Planet )
 		if( $Zone[ 'difficulty' ] === 3 )
 		{
 			$HardZones++;
+		}
+
+		if( $Zone[ 'difficulty' ] === 2 )
+		{
+			$MediumZones++;
 		}
 
 		// Always join boss zone
@@ -262,6 +270,7 @@ function GetFirstAvailableZone( $Planet )
 
 	$Zone = $CleanZones[ 0 ];
 	$Zone[ 'hard_zones' ] = $HardZones;
+	$Zone[ 'medium_zones' ] = $MediumZones;
 	$Zone[ 'planet_captured' ] = $PlanetCaptured;
 	$Zone[ 'planet_players' ] = $PlanetPlayers;
 
@@ -288,23 +297,36 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 		while( empty( $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ] ) );
 
 		$Planet[ 'hard_zones' ] = 0;
+		$Planet[ 'medium_zones' ] = 0;
 
 		foreach( $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ] as $Zone )
 		{
-			if( !$Zone[ 'captured' ] && $Zone[ 'difficulty' ] === 3 && ( empty( $Zone[ 'capture_progress' ] ) || $Zone[ 'capture_progress' ] < 0.95 ) )
+			if( !$Zone[ 'captured' ] && ( empty( $Zone[ 'capture_progress' ] ) || $Zone[ 'capture_progress' ] < 0.95 ) )
 			{
-				$Planet[ 'hard_zones' ]++;
+				if( $Zone[ 'difficulty' ] === 3)
+				{
+					$Planet[ 'hard_zones' ]++;
+				}
+				else if( $Zone[ 'difficulty' ] === 2 )
+				{
+					$Planet[ 'medium_zones' ]++;
+				} 			
 			}
 		}
 
-		Msg( '>> Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . '){normal} has {yellow}' . $Planet[ 'hard_zones' ] . '{normal} hard zones' );
+		Msg( '>> Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . '){normal} has {yellow}' . $Planet[ 'hard_zones' ] . '{normal} hard zones and {yellow}' . $Planet[ 'medium_zones' ] . '{normal} medium zones' );
 	}
 
 	usort( $Planets, function( $a, $b )
 	{
 		if( $b[ 'hard_zones' ] === $a[ 'hard_zones' ] )
 		{
-			return $a[ 'id' ] - $b[ 'id' ];
+			if( $b[ 'medium_zones' ] === $a[ 'medium_zones' ] )
+			{
+				return $a[ 'id' ] - $b[ 'id' ];
+			}
+
+			return $b[ 'medium_zones' ] - $a[ 'medium_zones' ];
 		}
 		
 		return $a[ 'hard_zones' ] - $b[ 'hard_zones' ];
@@ -317,7 +339,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 			continue;
 		}
 
-		if( !$Planet[ 'hard_zones' ] )
+		if( !$Planet[ 'hard_zones' ] || !$Planet[ 'medium_zones' ] )
 		{
 			continue;
 		}
@@ -327,14 +349,15 @@ function GetFirstAvailablePlanet( $SkippedPlanets )
 			Msg(
 				'>> Selected planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' .
 				'{normal} - Players: {yellow}' . number_format( $Planet[ 'state' ][ 'current_players' ] ) .
-				'{normal} - Hard zones: {yellow}' . $Planet[ 'hard_zones' ]
+				'{normal} - Hard zones: {yellow}' . $Planet[ 'hard_zones' ] .
+				'{normal} - Medium zones: {yellow}' . $Planet[ 'medium_zones' ]
 			);
 
 			return $Planet[ 'id' ];
 		}
 	}
 
-	// If there are no planets with hard zones, just return first one
+	// If there are no planets with hard or medium zones, just return first one
 	return $Planets[ 0 ][ 'id' ];
 }
 
