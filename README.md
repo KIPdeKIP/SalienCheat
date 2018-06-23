@@ -17,7 +17,7 @@
    4. Find `;extension=curl` and remove the semicolon
    5. Save as `php.ini`
 2. Extract the contents of this script to the same folder
-3. Run the script: `php cheat.php`
+3. Run `cheat.bat`
 
 You can also provide token directly in CLI, to ease running multiple accounts:
 ```
