@@ -55,6 +55,10 @@ $WaitTime = 110;
 $KnownPlanets = [];
 $SkippedPlanets = [];
 $CurrentPlanetName = '??';
+$ZonePaces =
+[
+	'Planet' => 0,
+];
 
 lol_using_goto_in_2018:
 
@@ -94,7 +98,7 @@ do
 
 	do
 	{
-		$Zone = GetFirstAvailableZone( $CurrentPlanet );
+		$Zone = GetFirstAvailableZone( $CurrentPlanet, $ZonePaces );
 	}
 	while( $Zone === null && sleep( 5 ) === 0 );
 
@@ -156,7 +160,7 @@ do
 
 	Msg(
 		'>> Zone {green}' . $Zone[ 'zone_position' ] .
-		'{normal} - Captured: {yellow}' . number_format( empty( $Zone[ 'capture_progress' ] ) ? 0 : ( $Zone[ 'capture_progress' ] * 100 ), 2 ) . '%' .
+		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
 	);
 
@@ -239,13 +243,22 @@ function GetNameForDifficulty( $Zone )
 	return $Boss . $Difficulty;
 }
 
-function GetFirstAvailableZone( $Planet )
+function GetFirstAvailableZone( $Planet, &$ZonePaces )
 {
 	$Zones = SendGET( 'ITerritoryControlMinigameService/GetPlanet', 'id=' . $Planet . '&language=english' );
 
 	if( empty( $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ] ) )
 	{
 		return null;
+	}
+
+	if( $ZonePaces[ 'Planet' ] != $Planet )
+	{
+		$ZonePaces =
+		[
+			'Planet' => $Planet,
+			'Zones' => [],
+		];
 	}
 
 	global $CurrentPlanetName;
@@ -259,8 +272,13 @@ function GetFirstAvailableZone( $Planet )
 	$MediumZones = 0;
 	$EasyZones = 0;
 	
-	foreach( $Zones as $Zone )
+	foreach( $Zones as &$Zone )
 	{
+		if( empty( $Zone[ 'capture_progress' ] ) )
+		{
+			$Zone[ 'capture_progress' ] = 0.0;
+		}
+
 		if( $Zone[ 'captured' ] )
 		{
 			continue;
@@ -276,8 +294,32 @@ function GetFirstAvailableZone( $Planet )
 			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
 
+		$PaceCutoff = 0.97;
+
+		if( isset( $ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ] ) )
+		{
+			$Paces = $ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ];
+			$Paces[] = $Zone[ 'capture_progress' ];
+			$Differences = [];
+
+			for( $i = count( $Paces ) - 1; $i > 0; $i-- )
+			{
+				$Differences[] = $Paces[ $i ] - $Paces[ $i - 1 ];
+			}
+
+			$PaceCutoff = array_sum( $Differences ) / count( $Differences );
+
+			if ( $PaceCutoff > 0.02 )
+			{
+				Msg( '-- Current pace for Zone {green}' . $Zone[ 'zone_position' ] . '{normal} is {green}+' . number_format( $PaceCutoff * 100, 2 ) . '%' );
+			}
+
+			$PaceCutoff = 0.98 - $PaceCutoff;
+		}
+
 		// If a zone is close to completion, skip it because Valve does not reward points
 		// and replies with 42 NoMatch instead
+		//if( $Zone[ 'capture_progress' ] > $PaceCutoff )
 		if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.97 )
 		{
 			continue;
@@ -292,7 +334,26 @@ function GetFirstAvailableZone( $Planet )
 
 		$CleanZones[] = $Zone;
 	}
-	
+
+	unset( $Zone );
+
+	foreach( $Zones as $Zone )
+	{
+		if( !isset( $ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ] ) )
+		{
+			$ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ] = [ $Zone[ 'capture_progress' ] ];
+		}
+		else
+		{
+			if( count( $ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ] ) > 4 )
+			{
+				array_shift( $ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ] );
+			}
+
+			$ZonePaces[ 'Zones' ][ $Zone[ 'zone_position' ] ][] = $Zone[ 'capture_progress' ];
+		}
+	}
+
 	if( empty( $CleanZones ) )
 	{
 		return false;
