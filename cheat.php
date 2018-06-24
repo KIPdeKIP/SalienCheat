@@ -55,9 +55,9 @@ $ZonePaces =
 ];
 
 echo PHP_EOL;
-echo "   \033[37;44m             SalienCheat for SteamDB             \033[0m" . PHP_EOL;
-echo "   \033[30;42m    If you want to support us, join our group:   \033[0m" . PHP_EOL;
-echo "   \033[30;42m    https://steamcommunity.com/groups/steamdb    \033[0m" . PHP_EOL;
+echo "   \033[37;44m                   SalienCheat                   \033[0m" . PHP_EOL;
+echo "   \033[30;42m             Updates can be found at             \033[0m" . PHP_EOL;
+echo "   \033[30;42m     https://github.com/KIPdeKIP/SalienCheat     \033[0m" . PHP_EOL;
 echo PHP_EOL;
 
 lol_using_goto_in_2018:
