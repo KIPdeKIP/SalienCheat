@@ -3,8 +3,9 @@
 ## Installation instructions
 
 1. Join the group you want to represent
-2. Download this repository somewhere
-   - `git clone https://github.com/KIPdeKIP/SalienCheat.git`
+   - https://steamcommunity.com/saliengame/play/
+2. Download this script
+   - https://github.com/KIPdeKIP/SalienCheat/archive/master.zip
 3. Run `cheat.bat` and follow the instructions
 
 You can also provide token directly in CLI, to ease running multiple accounts:
