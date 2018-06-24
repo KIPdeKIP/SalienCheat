@@ -54,6 +54,12 @@ $ZonePaces =
 	'Planet' => 0,
 ];
 
+echo PHP_EOL;
+echo "   \033[37;44m             SalienCheat for SteamDB             \033[0m" . PHP_EOL;
+echo "   \033[30;42m    If you want to support us, join our group:   \033[0m" . PHP_EOL;
+echo "   \033[30;42m    https://steamcommunity.com/groups/steamdb    \033[0m" . PHP_EOL;
+echo PHP_EOL;
+
 lol_using_goto_in_2018:
 
 $LastDifficulty = -1;
@@ -257,10 +263,11 @@ function GetFirstAvailableZone( $Planet, &$ZonePaces, $WaitTime )
 	}
 
 	global $CurrentPlanetName;
-	$CurrentPlanetName = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'state' ][ 'name' ];
 
-	$PlanetCaptured = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'state' ][ 'capture_progress' ];
-	$PlanetPlayers = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'state' ][ 'current_players' ];
+	$State = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'state' ];
+	$CurrentPlanetName = $State[ 'name' ];
+	$PlanetCaptured = empty( $State[ 'capture_progress' ] ) ? 0.0 : $State[ 'capture_progress' ];
+	$PlanetPlayers = empty( $State[ 'current_players' ] ) ? 0 : $State[ 'current_players' ];
 	$Zones = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ];
 	$CleanZones = [];
 	$HardZones = 0;
@@ -401,6 +408,8 @@ function IsThereAnyNewPlanets( $KnownPlanets )
 
 function GetFirstAvailablePlanet( $SkippedPlanets, &$KnownPlanets )
 {
+	Msg( '   {grey}Finding the best planet...' );
+
 	$Planets = SendGET( 'ITerritoryControlMinigameService/GetPlanets', 'active_only=1&language=english' );
 
 	if( empty( $Planets[ 'response' ][ 'planets' ] ) )
@@ -465,7 +474,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets, &$KnownPlanets )
 				$Planet[ 'medium_zones' ],
 				$Planet[ 'easy_zones' ],
 				number_format( empty( $Planet[ 'state' ][ 'capture_progress' ] ) ? 0 : ( $Planet[ 'state' ][ 'capture_progress' ] * 100 ), 2 ),
-				number_format( $Planet[ 'state' ][ 'current_players' ] ),
+				number_format( empty( $Planet[ 'state' ][ 'current_players' ] ) ? 0 : $Planet[ 'state' ][ 'current_players' ] ),
 				$Planet[ 'state' ][ 'name' ],
 			]
 		);
@@ -534,10 +543,12 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 		{
 			SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_zone_game' ] );
 		}
-		
-		// :^)
-		Msg( '{green}Note: this script does not automatically choose which group you represent. Please set it first at the game\'s page.' );
-		Msg( 'https://store.steampowered.com/saliengame/play' );
+
+		if( isset( $Data[ 'response' ][ 'score' ] ) && !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) )
+		{
+			Msg( '{green}-- You are currently not representing any clan, Please select a clan at the game\'s page.' );
+			Msg( '{yellow}https://store.steampowered.com/saliengame/play/' );
+		}
 	}
 	while( !isset( $Data[ 'response' ][ 'score' ] ) );
 
@@ -560,18 +571,26 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 
 function SendPOST( $Method, $Data )
 {
+	return ExecuteRequest( $Method, 'https://community.steam-api.com/' . $Method . '/v0001/', $Data );
+}
+
+function SendGET( $Method, $Data )
+{
+	return ExecuteRequest( $Method, 'https://community.steam-api.com/' . $Method . '/v0001/?' . $Data );
+}
+
+function ExecuteRequest( $Method, $URL, $Data = [] )
+{
 	$c = curl_init( );
 
 	curl_setopt_array( $c, [
-		CURLOPT_URL            => 'https://community.steam-api.com/' . $Method . '/v0001/',
+		CURLOPT_URL            => $URL,
 		CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3464.0 Safari/537.36',
 		CURLOPT_RETURNTRANSFER => true,
 		CURLOPT_ENCODING       => 'gzip',
-		CURLOPT_TIMEOUT        => 60,
+		CURLOPT_TIMEOUT        => empty( $Data ) ? 10 : 60,
 		CURLOPT_CONNECTTIMEOUT => 10,
 		CURLOPT_HEADER         => 1,
-		CURLOPT_POST           => 1,
-		CURLOPT_POSTFIELDS     => $Data,
 		CURLOPT_CAINFO         => __DIR__ . '/cacert.pem',
 		CURLOPT_HTTPHEADER     =>
 		[
@@ -581,7 +600,13 @@ function SendPOST( $Method, $Data )
 			'Referer: https://steamcommunity.com/saliengame/play',
 		],
 	] );
-	
+
+	if( !empty( $Data ) )
+	{
+		curl_setopt( $c, CURLOPT_POST, 1 );
+		curl_setopt( $c, CURLOPT_POSTFIELDS, $Data );
+	}
+
 	if ( !empty( $_SERVER[ 'LOCAL_ADDRESS' ] ) )
 	{
 		curl_setopt( $c, CURLOPT_INTERFACE, $_SERVER[ 'LOCAL_ADDRESS' ] );
@@ -589,8 +614,6 @@ function SendPOST( $Method, $Data )
 
 	do
 	{
-		Msg( '   {grey}Sending ' . $Method . '...', ' ' );
-
 		$Data = curl_exec( $c );
 
 		$HeaderSize = curl_getinfo( $c, CURLINFO_HEADER_SIZE );
@@ -599,13 +622,9 @@ function SendPOST( $Method, $Data )
 
 		preg_match( '/X-eresult: ([0-9]+)/', $Header, $EResult ) === 1 ? $EResult = (int)$EResult[ 1 ] : $EResult = 0;
 
-		if( $EResult === 1 )
+		if( $EResult !== 1 )
 		{
-			echo 'OK' . PHP_EOL;
-		}
-		else
-		{
-			echo 'EResult: ' . $EResult . ' - ' . $Data . PHP_EOL;
+			Msg( '{lightred}!! ' . $Method . ' failed - EResult: ' . $EResult . ' - ' . $Data );
 
 			if( $EResult === 15 && $Method === 'ITerritoryControlMinigameService/RepresentClan' )
 			{
@@ -636,47 +655,7 @@ function SendPOST( $Method, $Data )
 	while( !isset( $Data[ 'response' ] ) && sleep( 1 ) === 0 );
 
 	curl_close( $c );
-	
-	return $Data;
-}
 
-function SendGET( $Method, $Data )
-{
-	$c = curl_init( );
-
-	curl_setopt_array( $c, [
-		CURLOPT_URL            => 'https://community.steam-api.com/' . $Method . '/v0001/?' . $Data,
-		CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3464.0 Safari/537.36',
-		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_ENCODING       => 'gzip',
-		CURLOPT_TIMEOUT        => 10,
-		CURLOPT_CONNECTTIMEOUT => 10,
-		CURLOPT_CAINFO         => __DIR__ . '/cacert.pem',
-		CURLOPT_HTTPHEADER     =>
-		[
-			'Accept: */*',
-			'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
-			'Origin: https://steamcommunity.com',
-			'Referer: https://steamcommunity.com/saliengame/play',
-		],
-	] );
-	
-	if ( !empty( $_SERVER[ 'LOCAL_ADDRESS' ] ) )
-	{
-		curl_setopt( $c, CURLOPT_INTERFACE, $_SERVER[ 'LOCAL_ADDRESS' ] );
-	}
-
-	do
-	{
-		Msg( '   {grey}Sending ' . $Method . '...' );
-		
-		$Data = curl_exec( $c );
-		$Data = json_decode( $Data, true );
-	}
-	while( !isset( $Data[ 'response' ] ) && sleep( 1 ) === 0 );
-
-	curl_close( $c );
-	
 	return $Data;
 }
 
