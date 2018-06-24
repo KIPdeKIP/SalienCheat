@@ -120,9 +120,12 @@ do
 
 	$LagAdjustedWaitTime -= microtime( true ) - $PlanetCheckTime;
 
-	Msg( '   {grey}Waiting ' . number_format( $LagAdjustedWaitTime, 3 ) . ' remaining seconds before submitting score...' );
+	if( $LagAdjustedWaitTime > 0 )
+	{
+		Msg( '   {grey}Waiting ' . number_format( $LagAdjustedWaitTime, 3 ) . ' remaining seconds before submitting score...' );
 
-	usleep( $LagAdjustedWaitTime * 1000000 );
+		usleep( $LagAdjustedWaitTime * 1000000 );
+	}
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
@@ -130,8 +133,10 @@ do
 	{
 		$Data = $Data[ 'response' ];
 
+		echo PHP_EOL;
+
 		Msg(
-			'>> Your Score: {green}' . number_format( $Data[ 'new_score' ] ) .
+			'>> Your Score: {lightred}' . number_format( $Data[ 'new_score' ] ) .
 			'{yellow} (+' . number_format( $Data[ 'new_score' ] - $Data[ 'old_score' ] ) . ')' .
 			'{normal} - Current level: {green}' . $Data[ 'new_level' ] .
 			'{normal} (' . number_format( $Data[ 'new_score' ] / $Data[ 'next_level_score' ] * 100, 2 ) . '%)'
@@ -164,7 +169,7 @@ function GetScoreForZone( $Zone )
 
 function GetNameForDifficulty( $Zone )
 {
-	$Boss = $Zone[ 'type' ] === 4 ? 'BOSS - ' : '';
+	$Boss = $Zone[ 'type' ] == 4 ? 'BOSS - ' : '';
 	$Difficulty = $Zone[ 'difficulty' ];
 
 	switch( $Zone[ 'difficulty' ] )
@@ -191,6 +196,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	$HardZones = 0;
 	$MediumZones = 0;
 	$EasyZones = 0;
+	$ZoneMessages = [];
 	
 	foreach( $Zones as &$Zone )
 	{
@@ -214,7 +220,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
 
-		$PaceCutoff = 0.97;
+		$Cutoff = 0.97;
 
 		if( isset( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) )
 		{
@@ -228,6 +234,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			}
 
 			$PaceCutoff = array_sum( $Differences ) / count( $Differences );
+			$Cutoff = $Cutoff - $PaceCutoff * 1.6;
 
 			if( $PaceCutoff > 0.02 )
 			{
@@ -235,26 +242,24 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 				$Minutes = floor( $PaceTime / 60 );
 				$Seconds = $PaceTime % 60;
 
-				Msg(
+				$ZoneMessages[] =
+				[
 					'     Zone {yellow}%3d{normal} - Captured: {yellow}%5s%%{normal} - Cutoff: {yellow}%5s%%{normal} - Pace: {yellow}+%s%%{normal} - ETA: {yellow}%2dm %2ds{normal}',
-					PHP_EOL,
 					[
 						$Zone[ 'zone_position' ],
 						number_format( $Zone[ 'capture_progress' ] * 100, 2 ),
-						number_format( ( 0.98 - $PaceCutoff ) * 100, 2 ),
+						number_format( $Cutoff * 100, 2 ),
 						number_format( $PaceCutoff * 100, 2 ),
 						$Minutes,
 						$Seconds,
 					]
-				);
+				];
 			}
-
-			$PaceCutoff = 0.97 - $PaceCutoff;
 		}
 
 		// If a zone is close to completion, skip it because Valve does not reward points
 		// and replies with 42 NoMatch instead
-		if( $Zone[ 'capture_progress' ] > $PaceCutoff )
+		if( $Zone[ 'capture_progress' ] >= $Cutoff )
 		{
 			continue;
 		}
@@ -308,6 +313,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		'medium_zones' => $MediumZones,
 		'easy_zones' => $EasyZones,
 		'best_zone' => $CleanZones[ 0 ],
+		'messages' => $ZoneMessages,
 	];
 }
 
@@ -324,6 +330,16 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 	foreach( $Planets as &$Planet )
 	{
+		if( empty( $Planet[ 'state' ][ 'capture_progress' ] ) )
+		{
+			$Planet[ 'state' ][ 'capture_progress' ] = 0.0;
+		}
+
+		if( empty( $Planet[ 'state' ][ 'current_players' ] ) )
+		{
+			$Planet[ 'state' ][ 'current_players' ] = 0;
+		}
+
 		$KnownPlanets[ $Planet[ 'id' ] ] = true;
 
 		if( !isset( $ZonePaces[ $Planet[ 'id' ] ] ) )
@@ -358,14 +374,29 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 			PHP_EOL,
 			[
 				$Planet[ 'id' ],
-				number_format( empty( $Planet[ 'state' ][ 'capture_progress' ] ) ? 0 : ( $Planet[ 'state' ][ 'capture_progress' ] * 100 ), 2 ),
+				number_format( $Planet[ 'state' ][ 'capture_progress' ] * 100, 2 ),
 				$Planet[ 'hard_zones' ],
 				$Planet[ 'medium_zones' ],
 				$Planet[ 'easy_zones' ],
-				number_format( empty( $Planet[ 'state' ][ 'current_players' ] ) ? 0 : $Planet[ 'state' ][ 'current_players' ] ),
+				number_format( $Planet[ 'state' ][ 'current_players' ] ),
 				$Planet[ 'state' ][ 'name' ],
 			]
 		);
+
+		if( $Zone !== false )
+		{
+			foreach( $Zone[ 'messages' ] as $Message )
+			{
+				Msg( $Message[ 0 ], PHP_EOL, $Message[ 1 ] );
+			}
+
+			if( $Zone[ 'best_zone' ][ 'type' ] == 4 )
+			{
+				Msg( '{green}>> This planet has an uncaptured boss, selecting this planet...' );
+
+				return $Planet;
+			}
+		}
 	}
 
 	// https://bugs.php.net/bug.php?id=71454
