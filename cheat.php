@@ -107,7 +107,7 @@ do
 	$LagAdjustedWaitTime += 0.1;
 	$PlanetCheckTime = microtime( true );
 
-	Msg( '   {grey}Waiting 60 seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting {green}60 {grey}seconds before rescanning planets...' );
 
 	sleep( 60 );
 
@@ -122,10 +122,13 @@ do
 
 	if( $LagAdjustedWaitTime > 0 )
 	{
-		Msg( '   {grey}Waiting ' . number_format( $LagAdjustedWaitTime, 3 ) . ' remaining seconds before submitting score...' );
+		Msg( '   {grey}Waiting {green}' . number_format( $LagAdjustedWaitTime, 3 ) . ' {grey}remaining seconds before submitting score...' );
 
 		usleep( $LagAdjustedWaitTime * 1000000 );
 	}
+
+	$TotalWait = microtime( true ) - $PlanetCheckTime;
+	Msg( '   {grey}Submitting score. Waited {green}' . number_format( $TotalWait, 3 ) . ' {grey}seconds.' );
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
