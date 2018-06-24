@@ -534,11 +534,10 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 		{
 			SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_zone_game' ] );
 		}
-
-		if( !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) || $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] != 5509543 )
-		{
-			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=5509543&access_token=' . $Token );
-		}
+		
+		// :^)
+		Msg( '{green}Note: this script does not automatically choose which group you represent. Please set it first at the game\'s page.' );
+		Msg( 'https://store.steampowered.com/saliengame/play' );
 	}
 	while( !isset( $Data[ 'response' ][ 'score' ] ) );
 
@@ -612,8 +611,7 @@ function SendPOST( $Method, $Data )
 			{
 				echo PHP_EOL;
 
-				Msg( '{green}You need to join the group for this script to work:' );
-				Msg( '{yellow}https://steamcommunity.com/groups/SteamDB' );
+				Msg( '{green}You are not a part of the clan you want to represent' );
 
 				sleep( 10 );
 			}

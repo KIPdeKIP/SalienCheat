@@ -2,11 +2,10 @@
 
 ## Installation instructions
 
-1. Be a part of https://steamcommunity.com/groups/RemGC (needed to represent captures)
-2. Clone this repository to `C:\php`
-   - `git clone https://github.com/KIPdeKIP/SalienCheat.git C:\php`
-3. Grab your token from https://steamcommunity.com/saliengame/gettoken and save it as `token.txt` in the same folder.
-4. Run `cheat.bat`
+1. Join the group you want to represent
+2. Download this repository somewhere
+   - `git clone https://github.com/KIPdeKIP/SalienCheat.git`
+3. Run `cheat.bat` and follow the instructions
 
 You can also provide token directly in CLI, to ease running multiple accounts:
 ```
