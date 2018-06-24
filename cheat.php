@@ -56,6 +56,7 @@ $ZonePaces =
 
 lol_using_goto_in_2018:
 
+$LastDifficulty = -1;
 $LastRestart = time();
 
 do
@@ -92,7 +93,7 @@ do
 
 	do
 	{
-		$Zone = GetFirstAvailableZone( $CurrentPlanet, $ZonePaces );
+		$Zone = GetFirstAvailableZone( $CurrentPlanet, $ZonePaces, $WaitTime );
 	}
 	while( $Zone === null && sleep( 5 ) === 0 );
 
@@ -105,6 +106,16 @@ do
 		goto lol_using_goto_in_2018;
 	}
 
+	$PreviousDifficulty = $LastDifficulty;
+	$LastDifficulty = $Zone[ 'difficulty' ];
+
+	if( $PreviousDifficulty > $LastDifficulty )
+	{
+		Msg( '{lightred}!! Difficulty has been lowered (from ' . $PreviousDifficulty . ' to ' . $LastDifficulty . ') on this planet, restarting...' );
+
+		goto lol_using_goto_in_2018;
+	}
+
 	// Find a new planet if there are no hard zones left
 	$HardZones = $Zone[ 'hard_zones' ];
 	$MediumZones = $Zone[ 'medium_zones' ];
@@ -112,21 +123,11 @@ do
 	$PlanetCaptured = $Zone[ 'planet_captured' ];
 	$PlanetPlayers = $Zone[ 'planet_players' ];
 
-	if( !$HardZones )
+	if( !$HardZones && IsThereAnyNewPlanets( $KnownPlanets ) )
 	{
-		if( !$MediumZones && time() - $LastRestart > $WaitTime )
-		{
-			Msg( '{lightred}!! No hard or medium zones on this planet, restarting...' );
+		Msg( '{lightred}!! Detected a new planet, restarting...' );
 
-			goto lol_using_goto_in_2018;
-		}
-		
-		if( IsThereAnyNewPlanets( $KnownPlanets ) )
-		{
-			Msg( '{lightred}!! Detected a new planet, restarting...' );
-
-			goto lol_using_goto_in_2018;
-		}
+		goto lol_using_goto_in_2018;
 	}
 
 	$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinZone', 'zone_position=' . $Zone[ 'zone_position' ] . '&access_token=' . $Token );
@@ -168,7 +169,7 @@ do
 		);
 	}
 
-	Msg( '   {grey}Waiting ' . $WaitTime . ' seconds for the game to end...' );
+	Msg( '   {grey}Waiting ' . $WaitTime . ' seconds for this round to end...' );
 
 	sleep( $WaitTime );
 	
@@ -237,7 +238,7 @@ function GetNameForDifficulty( $Zone )
 	return $Boss . $Difficulty;
 }
 
-function GetFirstAvailableZone( $Planet, &$ZonePaces )
+function GetFirstAvailableZone( $Planet, &$ZonePaces, $WaitTime )
 {
 	$Zones = SendGET( 'ITerritoryControlMinigameService/GetPlanet', 'id=' . $Planet . '&language=english' );
 
@@ -303,9 +304,13 @@ function GetFirstAvailableZone( $Planet, &$ZonePaces )
 
 			$PaceCutoff = array_sum( $Differences ) / count( $Differences );
 
-			if ( $PaceCutoff > 0.02 )
+			if( $PaceCutoff > 0.02 )
 			{
-				Msg( '-- Current pace for Zone {green}' . $Zone[ 'zone_position' ] . '{normal} is {green}+' . number_format( $PaceCutoff * 100, 2 ) . '%' );
+				$PaceTime = ceil( ( 1 - $Zone[ 'capture_progress' ] ) / $PaceCutoff * $WaitTime );
+				$Minutes = floor( $PaceTime / 60 );
+				$Seconds = $PaceTime % 60;
+
+				Msg( '-- Current pace for Zone {green}' . $Zone[ 'zone_position' ] . '{normal} is {green}+' . number_format( $PaceCutoff * 100, 2 ) . '%{normal} ETA: {green}' . $Minutes . 'm ' . $Seconds . 's' );
 			}
 
 			$PaceCutoff = 0.98 - $PaceCutoff;
@@ -423,7 +428,7 @@ function GetFirstAvailablePlanet( $SkippedPlanets, &$KnownPlanets )
 
 		foreach( $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ] as $Zone )
 		{
-			if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.97 )
+			if( !empty( $Zone[ 'capture_progress' ] ) && $Zone[ 'capture_progress' ] > 0.93 )
 			{
 				continue;
 			}
@@ -534,12 +539,8 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 		{
 			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=5509543&access_token=' . $Token );
 		}
-		else
-		{
-			break;
-		}
 	}
-	while( true );
+	while( !isset( $Data[ 'response' ][ 'score' ] ) );
 
 	if( !isset( $Data[ 'response' ][ 'active_planet' ] ) )
 	{
@@ -581,6 +582,11 @@ function SendPOST( $Method, $Data )
 			'Referer: https://steamcommunity.com/saliengame/play',
 		],
 	] );
+	
+	if ( !empty( $_SERVER[ 'LOCAL_ADDRESS' ] ) )
+	{
+		curl_setopt( $c, CURLOPT_INTERFACE, $_SERVER[ 'LOCAL_ADDRESS' ] );
+	}
 
 	do
 	{
@@ -656,6 +662,11 @@ function SendGET( $Method, $Data )
 			'Referer: https://steamcommunity.com/saliengame/play',
 		],
 	] );
+	
+	if ( !empty( $_SERVER[ 'LOCAL_ADDRESS' ] ) )
+	{
+		curl_setopt( $c, CURLOPT_INTERFACE, $_SERVER[ 'LOCAL_ADDRESS' ] );
+	}
 
 	do
 	{
