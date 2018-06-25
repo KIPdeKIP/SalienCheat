@@ -107,9 +107,9 @@ do
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
 	$PlanetCheckTime = microtime( true );
 
-	Msg( '   {grey}Waiting 60 seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting 90 seconds before rescanning planets...' );
 
-	sleep( 60 );
+	sleep( 90 );
 
 	do
 	{
