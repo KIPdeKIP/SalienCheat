@@ -83,6 +83,7 @@ do
 	while( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet );
 
 	$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinZone', 'zone_position=' . $Zone[ 'zone_position' ] . '&access_token=' . $Token );
+	$WaitedTimeAfterJoinZone = microtime( true );
 
 	if( empty( $Zone[ 'response' ][ 'zone_info' ] ) )
 	{
@@ -103,18 +104,19 @@ do
 
 	Msg(
 		'>> Joined Zone {green}' . $Zone[ 'zone_position' ] .
-		'{normal} on planet {green}' . $BestPlanetAndZone[ 'id' ] .
+		'{normal} on Planet {green}' . $BestPlanetAndZone[ 'id' ] .
 		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
 	);
 
-	$SkippedLagTime = curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) + 0.1;
+	$SkippedLagTime = curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) + 0.2;
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
+	$WaitTimeBeforeFirstScan = 50 + ( 50 - $SkippedLagTime );
 	$PlanetCheckTime = microtime( true );
 
-	Msg( '   {grey}Waiting 90 seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds before rescanning planets...' );
 
-	sleep( 90 );
+	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
 	do
 	{
@@ -130,6 +132,9 @@ do
 
 		usleep( $LagAdjustedWaitTime * 1000000 );
 	}
+
+	$WaitedTimeAfterJoinZone = microtime( true ) - $WaitedTimeAfterJoinZone;
+	Msg( '   {grey}Waited ' . number_format( $WaitedTimeAfterJoinZone, 3 ) . ' (+' . number_format( $SkippedLagTime, 4 ) . ' lag) total seconds before sending score' );
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
@@ -153,8 +158,8 @@ do
 		Msg(
 			'>> Your Score: {lightred}' . number_format( $Data[ 'new_score' ] ) .
 			'{yellow} (+' . number_format( $Data[ 'new_score' ] - $Data[ 'old_score' ] ) . ')' .
-			'{normal} - Current level: {green}' . $Data[ 'new_level' ] .
-			'{normal} (' . number_format( $Data[ 'new_score' ] / $Data[ 'next_level_score' ] * 100, 2 ) . '%)'
+			'{normal} - Current Level: {green}' . $Data[ 'new_level' ] .
+			'{normal} (' . number_format( GetNextLevelProgress( $Data ) * 100, 2 ) . '%)'
 		);
 		
 		$Time = ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => $Zone[ 'difficulty' ] ] ) * ( $WaitTime / 60 );
@@ -162,13 +167,44 @@ do
 		$Minutes = $Time % 60;
 		
 		Msg(
-			'>> Next level: {yellow}' . number_format( $Data[ 'next_level_score' ] ) .
+			'>> Next Level: {yellow}' . number_format( $Data[ 'next_level_score' ] ) .
 			'{normal} XP - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) .
 			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm'
 		);
 	}
 }
 while( true );
+
+function GetNextLevelProgress( $Data )
+{
+	$ScoreTable =
+	[
+		0,       // Level 1
+		1200,    // Level 2
+		2400,    // Level 3
+		4800,    // Level 4
+		12000,   // Level 5
+		30000,   // Level 6
+		72000,   // Level 7
+		180000,  // Level 8
+		450000,  // Level 9
+		1200000, // Level 10
+		2400000, // Level 11
+		3600000, // Level 12
+		4800000, // Level 13
+		6000000, // Level 14
+	];
+
+	$PreviousLevel = $Data[ 'new_level' ] - 1;
+
+	if( !isset( $ScoreTable[ $PreviousLevel ] ) )
+	{
+		Msg( '{lightred}!! Score for next level is unknown, you probably should update the script.' );
+		return 0;
+	}
+
+	return ( $Data[ 'new_score' ] - $ScoreTable[ $PreviousLevel ] ) / ( $Data[ 'next_level_score' ] - $ScoreTable[ $PreviousLevel ] );
+}
 
 function GetScoreForZone( $Zone )
 {
@@ -189,8 +225,8 @@ function GetNameForDifficulty( $Zone )
 
 	switch( $Zone[ 'difficulty' ] )
 	{
+		case 3: $Difficulty = 'High'; break;
 		case 2: $Difficulty = 'Medium'; break;
-		case 3: $Difficulty = 'Hard'; break;
 		case 1: $Difficulty = 'Low'; break;
 	}
 
@@ -208,11 +244,14 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 
 	$Zones = $Zones[ 'response' ][ 'planets' ][ 0 ][ 'zones' ];
 	$CleanZones = [];
-	$HardZones = 0;
+	$HighZones = 0;
 	$MediumZones = 0;
-	$EasyZones = 0;
+	$LowZones = 0;
 	$ZoneMessages = [];
-	
+
+	$ZonePaces[ $Planet ][ 'times' ][] = microtime( true );
+	$CurrentTimes = $ZonePaces[ $Planet ][ 'times' ];
+
 	foreach( $Zones as &$Zone )
 	{
 		if( empty( $Zone[ 'capture_progress' ] ) )
@@ -240,14 +279,18 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			$Paces = $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ];
 			$Paces[] = $Zone[ 'capture_progress' ];
 			$Differences = [];
+			$DifferenceTimes = [];
 
 			for( $i = count( $Paces ) - 1; $i > 0; $i-- )
 			{
-				$Differences[] = $Paces[ $i ] - $Paces[ $i - 1 ];
+				$TimeDelta = $CurrentTimes[ $i ] - $CurrentTimes[ $i - 1 ];
+				$DifferenceTimes[] = $TimeDelta;
+				$Differences[] = ( $Paces[ $i ] - $Paces[ $i - 1 ] ) / $TimeDelta;
 			}
 
-			$PaceCutoff = array_sum( $Differences ) / count( $Differences );
-			$Cutoff = 0.97 - $PaceCutoff * 1.6;
+			$TimeDelta = array_sum( $DifferenceTimes ) / count( $DifferenceTimes );
+			$PaceCutoff = ( array_sum( $Differences ) / count( $Differences ) ) * $TimeDelta;
+			$Cutoff = 1.0 - min( 0.1, $PaceCutoff );
 
 			if( $PaceCutoff > 0.02 )
 			{
@@ -284,9 +327,9 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 
 		switch( $Zone[ 'difficulty' ] )
 		{
-			case 3: $HardZones++; break;
+			case 3: $HighZones++; break;
 			case 2: $MediumZones++; break;
-			case 1: $EasyZones++; break;
+			case 1: $LowZones++; break;
 		}
 
 		$CleanZones[] = $Zone;
@@ -302,13 +345,18 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		}
 		else
 		{
-			if( count( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) > 4 )
+			if( count( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) > 3 )
 			{
 				array_shift( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] );
 			}
 
 			$ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ][] = $Zone[ 'capture_progress' ];
 		}
+	}
+
+	if( count( $ZonePaces[ $Planet ][ 'times' ] ) > 4 )
+	{
+		array_shift( $ZonePaces[ $Planet ][ 'times' ] );
 	}
 
 	if( empty( $CleanZones ) )
@@ -327,9 +375,9 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	} );
 
 	return [
-		'hard_zones' => $HardZones,
+		'high_zones' => $HighZones,
 		'medium_zones' => $MediumZones,
-		'easy_zones' => $EasyZones,
+		'low_zones' => $LowZones,
 		'best_zone' => $CleanZones[ 0 ],
 		'messages' => $ZoneMessages,
 	];
@@ -362,7 +410,10 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 		if( !isset( $ZonePaces[ $Planet[ 'id' ] ] ) )
 		{
-			$ZonePaces[ $Planet[ 'id' ] ] = [];
+			$ZonePaces[ $Planet[ 'id' ] ] =
+			[
+				'times' => []
+			];
 		}
 
 		do
@@ -375,27 +426,27 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 		{
 			$ZonePaces[ $Planet[ 'id' ] ] = [];
 			$SkippedPlanets[ $Planet[ 'id' ] ] = true;
-			$Planet[ 'hard_zones' ] = 0;
+			$Planet[ 'high_zones' ] = 0;
 			$Planet[ 'medium_zones' ] = 0;
-			$Planet[ 'easy_zones' ] = 0;
+			$Planet[ 'low_zones' ] = 0;
 		}
 		else
 		{
-			$Planet[ 'hard_zones' ] = $Zone[ 'hard_zones' ];
+			$Planet[ 'high_zones' ] = $Zone[ 'high_zones' ];
 			$Planet[ 'medium_zones' ] = $Zone[ 'medium_zones' ];
-			$Planet[ 'easy_zones' ] = $Zone[ 'easy_zones' ];
+			$Planet[ 'low_zones' ] = $Zone[ 'low_zones' ];
 			$Planet[ 'best_zone' ] = $Zone[ 'best_zone' ];
 		}
 
 		Msg(
-			'>> Planet {green}%3d{normal} - Captured: {green}%5s%%{normal} - Hard: {yellow}%2d{normal} - Medium: {yellow}%2d{normal} - Easy: {yellow}%2d{normal} - Players: {yellow}%8s {green}(%s)',
+			'>> Planet {green}%3d{normal} - Captured: {green}%5s%%{normal} - High: {yellow}%2d{normal} - Medium: {yellow}%2d{normal} - Low: {yellow}%2d{normal} - Players: {yellow}%8s {green}(%s)',
 			PHP_EOL,
 			[
 				$Planet[ 'id' ],
 				number_format( $Planet[ 'state' ][ 'capture_progress' ] * 100, 2 ),
-				$Planet[ 'hard_zones' ],
+				$Planet[ 'high_zones' ],
 				$Planet[ 'medium_zones' ],
-				$Planet[ 'easy_zones' ],
+				$Planet[ 'low_zones' ],
 				number_format( $Planet[ 'state' ][ 'current_players' ] ),
 				$Planet[ 'state' ][ 'name' ],
 			]
@@ -420,7 +471,7 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 	// https://bugs.php.net/bug.php?id=71454
 	unset( $Planet );
 
-	$Priority = [ 'hard_zones', 'medium_zones', 'easy_zones' ];
+	$Priority = [ 'high_zones', 'medium_zones', 'low_zones' ];
 
 	usort( $Planets, function( $a, $b ) use ( $Priority )
 	{
@@ -454,7 +505,7 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 		if( !$Planet[ 'state' ][ 'captured' ] )
 		{
-			Msg( '>> Next zone is {green}' . $Planet[ 'best_zone' ][ 'zone_position' ] . '{normal} on planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' );
+			Msg( '>> Next Zone is {green}' . $Planet[ 'best_zone' ][ 'zone_position' ] . '{normal} on Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' );
 
 			return $Planet;
 		}
