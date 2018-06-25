@@ -66,8 +66,6 @@ do
 {
 	echo PHP_EOL;
 
-	$Zone = $BestPlanetAndZone[ 'best_zone' ];
-
 	do
 	{
 		// Leave current game before trying to switch planets (it will report InvalidState otherwise)
@@ -82,9 +80,10 @@ do
 	}
 	while( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet );
 
-	$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinZone', 'zone_position=' . $Zone[ 'zone_position' ] . '&access_token=' . $Token );
+	$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinZone', 'zone_position=' . $BestPlanetAndZone[ 'best_zone' ][ 'zone_position' ] . '&access_token=' . $Token );
 	$WaitedTimeAfterJoinZone = microtime( true );
 
+	// Rescan planets if joining failed
 	if( empty( $Zone[ 'response' ][ 'zone_info' ] ) )
 	{
 		Msg( '{lightred}!! Failed to join a zone, rescanning and restarting...' );
@@ -102,14 +101,33 @@ do
 
 	$Zone = $Zone[ 'response' ][ 'zone_info' ];
 
+	if( empty( $Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] ) )
+	{
+		$Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] = 0.0;
+	}
+
+	// Rescan planets if we join zone that will finish before we do
+	if( $Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] >= $BestPlanetAndZone[ 'best_zone' ][ 'cutoff' ] )
+	{
+		Msg( '{lightred}!! This zone will finish before us, rescanning and restarting...' );
+
+		do
+		{
+			$BestPlanetAndZone = GetBestPlanetAndZone( $SkippedPlanets, $KnownPlanets, $ZonePaces, $WaitTime );
+		}
+		while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
+
+		continue;
+	}
+
 	Msg(
-		'>> Joined Zone {green}' . $Zone[ 'zone_position' ] .
+		'>> Joined Zone {yellow}' . $Zone[ 'zone_position' ] .
 		'{normal} on Planet {green}' . $BestPlanetAndZone[ 'id' ] .
 		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
 	);
 
-	$SkippedLagTime = curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) + 0.2;
+	$SkippedLagTime = floor( curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) );
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
 	$WaitTimeBeforeFirstScan = 50 + ( 50 - $SkippedLagTime );
 	$PlanetCheckTime = microtime( true );
@@ -290,22 +308,28 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 
 			$TimeDelta = array_sum( $DifferenceTimes ) / count( $DifferenceTimes );
 			$PaceCutoff = ( array_sum( $Differences ) / count( $Differences ) ) * $TimeDelta;
-			$Cutoff = 1.0 - min( 0.1, $PaceCutoff );
+			$Cutoff = 1.0 - max( 0.1, $PaceCutoff ) / 1.05;
+			$PaceTime = $PaceCutoff > 0 ? ceil( ( 1 - $Zone[ 'capture_progress' ] ) / $PaceCutoff * $WaitTime ) : 1000;
+
+			if( 60 * 3 >= $PaceTime )
+			{
+				// If zone will finish soon, skip it
+				$Cutoff = 0.10;
+			}
 
 			if( $PaceCutoff > 0.02 )
 			{
-				$PaceTime = ceil( ( 1 - $Zone[ 'capture_progress' ] ) / $PaceCutoff * $WaitTime );
 				$Minutes = floor( $PaceTime / 60 );
 				$Seconds = $PaceTime % 60;
 
 				$ZoneMessages[] =
 				[
-					'     Zone {yellow}%3d{normal} - Captured: {yellow}%5s%%{normal} - Cutoff: {yellow}%5s%%{normal} - Pace: {yellow}+%s%%{normal} - ETA: {yellow}%2dm %2ds{normal}',
+					'     Zone {yellow}%3d{normal} - Captured: {yellow}%5s%%{normal} - Cutoff: {yellow}%5s%%{normal} - Pace: {yellow}%6s%%{normal} - ETA: {yellow}%2dm %2ds{normal}',
 					[
 						$Zone[ 'zone_position' ],
 						number_format( $Zone[ 'capture_progress' ] * 100, 2 ),
 						number_format( $Cutoff * 100, 2 ),
-						number_format( $PaceCutoff * 100, 2 ),
+						'+' . number_format( $PaceCutoff * 100, 2 ),
 						$Minutes,
 						$Seconds,
 					]
@@ -332,10 +356,13 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			case 1: $LowZones++; break;
 		}
 
+		$Zone[ 'cutoff' ] = $Cutoff;
 		$CleanZones[] = $Zone;
 	}
 
 	unset( $Zone );
+
+	$ShouldTruncate = count( $ZonePaces[ $Planet ][ 'times' ] ) > 1;
 
 	foreach( $Zones as $Zone )
 	{
@@ -345,7 +372,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		}
 		else
 		{
-			if( count( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) > 3 )
+			if( $ShouldTruncate )
 			{
 				array_shift( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] );
 			}
@@ -354,7 +381,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		}
 	}
 
-	if( count( $ZonePaces[ $Planet ][ 'times' ] ) > 4 )
+	if( $ShouldTruncate )
 	{
 		array_shift( $ZonePaces[ $Planet ][ 'times' ] );
 	}
@@ -505,7 +532,7 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 		if( !$Planet[ 'state' ][ 'captured' ] )
 		{
-			Msg( '>> Next Zone is {green}' . $Planet[ 'best_zone' ][ 'zone_position' ] . '{normal} on Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' );
+			Msg( '>> Best Zone is {yellow}' . $Planet[ 'best_zone' ][ 'zone_position' ] . '{normal} on Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' );
 
 			return $Planet;
 		}
