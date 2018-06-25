@@ -11,7 +11,7 @@ If you're not yet running PowerShell 3.0 please download [Windows Management Fra
 1. Join the group you want to represent
    - https://steamcommunity.com/saliengame/play/
 2. Download this script
-   - https://github.com/KIPdeKIP/SalienCheat/archive/master.zip
+   - https://github.com/KIPdeKIP/SalienCheat/releases/latest
 3. Run `cheat.bat` and follow the instructions
 
 You can also provide token directly in CLI, to ease running multiple accounts:
