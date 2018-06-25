@@ -129,7 +129,7 @@ do
 
 	$SkippedLagTime = floor( curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) );
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
-	$WaitTimeBeforeFirstScan = 50 + ( 50 - $SkippedLagTime );
+	$WaitTimeBeforeFirstScan = 90 - $SkippedLagTime;
 	$PlanetCheckTime = microtime( true );
 
 	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds before rescanning planets...' );
@@ -602,15 +602,15 @@ function GetCurl( )
 		CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36',
 		CURLOPT_RETURNTRANSFER => true,
 		CURLOPT_ENCODING       => 'gzip',
-		CURLOPT_TIMEOUT        => 30,
-		CURLOPT_CONNECTTIMEOUT => 10,
+		CURLOPT_TIMEOUT_MS     => 19980, // How long we wait for the transfer to complete. (19980 ms is the closest we can get to 20 seconds before risking going over it.)
+		CURLOPT_CONNECTTIMEOUT => 10, // How long we wait for a response from the remote. (CURLOPT_CONNECTTIMEOUT is a segment of CURLOPT_TIMEOUT)
 		CURLOPT_HEADER         => 1,
 		CURLOPT_CAINFO         => __DIR__ . '/cacert.pem',
 		CURLOPT_HTTPHEADER     =>
 		[
 			'Accept: */*',
 			'Origin: https://steamcommunity.com',
-			'Referer: https://steamcommunity.com/saliengame/play',
+			'Referer: https://steamcommunity.com/saliengame/play/',
 			'Connection: Keep-Alive',
 			'Keep-Alive: 300'
 		],
