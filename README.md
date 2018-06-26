@@ -2,7 +2,11 @@
 
 ## Requirements
 
-PowerShell 3.0 is required for automated installation. Older versions will not be supported.
+* A 64-bit version of Windows is required. Windows 10 is recommended.
+
+* PowerShell 3.0 is required for automated installation. Older versions will not be supported.
+
+---
 
 If you're not yet running PowerShell 3.0 please download [Windows Management Framework 3.0](https://www.microsoft.com/en-us/download/details.aspx?id=34595), which includes PowerShell 3.0. Installation instructions can be found [here](https://docs.microsoft.com/en-us/skypeforbusiness/set-up-your-computer-for-windows-powershell/download-and-install-windows-powershell-3-0).
 
