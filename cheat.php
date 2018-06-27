@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 
 set_time_limit( 0 );
@@ -8,16 +9,14 @@ if( !file_exists( __DIR__ . '/cacert.pem' ) )
 	exit( 1 );
 }
 
-$EnvToken = getenv('TOKEN');
-
 if( $argc === 2 )
 {
 	$Token = $argv[ 1 ];
 }
-else if( is_string( $EnvToken ) )
+else if( isset( $_SERVER[ 'TOKEN' ] ) )
 {
 	// if the token was provided as an env var, use it
-	$Token = $EnvToken;
+	$Token = $_SERVER[ 'TOKEN' ];
 }
 else
 {
@@ -37,22 +36,27 @@ else
 	unset( $ParsedToken );
 }
 
-unset( $EnvToken );
-
 if( strlen( $Token ) !== 32 )
 {
 	Msg( 'Failed to find your token. Verify token.txt' );
 	exit( 1 );
 }
 
-$LocalScriptHash = sha1( trim( file_get_contents( __FILE__ ) ) );
-$RepositoryScriptETag = '';
-$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
+if( isset( $_SERVER[ 'IGNORE_UPDATES' ] ) && (bool)$_SERVER[ 'IGNORE_UPDATES' ] )
+{
+	$UpdateCheck = false;
+}
+else
+{
+	$UpdateCheck = true;
+	$LocalScriptHash = sha1( trim( file_get_contents( __FILE__ ) ) );
+	$RepositoryScriptETag = '';
+	$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
+}
 
 $WaitTime = 110;
-$KnownPlanets = [];
-$SkippedPlanets = [];
 $ZonePaces = [];
+$OldScore = 0;
 
 echo PHP_EOL;
 echo "   \033[37;44m                   SalienCheat                   \033[0m" . PHP_EOL;
@@ -62,7 +66,7 @@ echo PHP_EOL;
 
 do
 {
-	$BestPlanetAndZone = GetBestPlanetAndZone( $SkippedPlanets, $KnownPlanets, $ZonePaces, $WaitTime );
+	$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 }
 while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
 
@@ -96,7 +100,7 @@ do
 
 		do
 		{
-			$BestPlanetAndZone = GetBestPlanetAndZone( $SkippedPlanets, $KnownPlanets, $ZonePaces, $WaitTime );
+			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 		}
 		while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
 
@@ -108,20 +112,6 @@ do
 	if( empty( $Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] ) )
 	{
 		$Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] = 0.0;
-	}
-
-	// Rescan planets if we join zone that will finish before we do
-	if( $Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] >= $BestPlanetAndZone[ 'best_zone' ][ 'cutoff' ] )
-	{
-		Msg( '{lightred}!! This zone will finish before us, rescanning and restarting...' );
-
-		do
-		{
-			$BestPlanetAndZone = GetBestPlanetAndZone( $SkippedPlanets, $KnownPlanets, $ZonePaces, $WaitTime );
-		}
-		while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
-
-		continue;
 	}
 
 	Msg(
@@ -136,23 +126,26 @@ do
 	$WaitTimeBeforeFirstScan = 90 - $SkippedLagTime;
 	$PlanetCheckTime = microtime( true );
 
-	if( $LocalScriptHash === $RepositoryScriptHash )
+	if( $UpdateCheck )
 	{
-		$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
+		if( $LocalScriptHash === $RepositoryScriptHash )
+		{
+			$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
+		}
+
+		if( $LocalScriptHash !== $RepositoryScriptHash )
+		{
+			Msg( '-- {lightred}Script has been updated on GitHub since you started this script, please make sure to update.' );
+		}
 	}
 
-	if( $LocalScriptHash !== $RepositoryScriptHash )
-	{
-		Msg( '-- {lightred}Script has been updated on GitHub since you started this script, please make sure to update.' );
-	}
-
-	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 0 ) . ' seconds before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
 	do
 	{
-		$BestPlanetAndZone = GetBestPlanetAndZone( $SkippedPlanets, $KnownPlanets, $ZonePaces, $WaitTime );
+		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 	}
 	while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
 
@@ -166,7 +159,7 @@ do
 	}
 
 	$WaitedTimeAfterJoinZone = microtime( true ) - $WaitedTimeAfterJoinZone;
-	Msg( '   {grey}Waited ' . number_format( $WaitedTimeAfterJoinZone, 3 ) . ' (+' . number_format( $SkippedLagTime, 0 ) . ' lag) total seconds before sending score' );
+	Msg( '   {grey}Waited ' . number_format( $WaitedTimeAfterJoinZone, 3 ) . ' (+' . number_format( $SkippedLagTime, 0 ) . ' second lag) total seconds before sending score' );
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
@@ -187,13 +180,20 @@ do
 
 		echo PHP_EOL;
 
+		// Store our own old score because the API may increment score while giving an error (e.g. a timeout)
+		if( !$OldScore )
+		{
+			$OldScore = $Data[ 'old_score' ];
+		}
+
 		Msg(
 			'>> Your Score: {lightred}' . number_format( $Data[ 'new_score' ] ) .
-			'{yellow} (+' . number_format( $Data[ 'new_score' ] - $Data[ 'old_score' ] ) . ')' .
+			'{yellow} (+' . number_format( $Data[ 'new_score' ] - $OldScore ) . ')' .
 			'{normal} - Current Level: {green}' . $Data[ 'new_level' ] .
 			'{normal} (' . number_format( GetNextLevelProgress( $Data ) * 100, 2 ) . '%)'
 		);
 		
+		$OldScore = $Data[ 'new_score' ];
 		$Time = ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => $Zone[ 'difficulty' ] ] ) * ( $WaitTime / 60 );
 		$Hours = floor( $Time / 60 );
 		$Minutes = $Time % 60;
@@ -228,6 +228,12 @@ function GetNextLevelProgress( $Data )
 		3600000, // Level 12
 		4800000, // Level 13
 		6000000, // Level 14
+		7200000, // Level 15
+		8400000, // Level 16
+		9600000, // Level 17
+		10800000, // Level 18
+		12000000, // Level 19
+		13200000, // Level 20
 	];
 
 	$PreviousLevel = $Data[ 'new_level' ] - 1;
@@ -248,8 +254,12 @@ function GetScoreForZone( $Zone )
 		case 1: $Score = 5; break;
 		case 2: $Score = 10; break;
 		case 3: $Score = 20; break;
+
+		// Set fallback score equal to high zone score to avoid uninitialized
+		// variable if new zone difficulty is introduced (e.g., for boss zones)
+		default: $Score = 20;
 	}
-	
+
 	return $Score * 120;
 }
 
@@ -282,6 +292,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	$HighZones = 0;
 	$MediumZones = 0;
 	$LowZones = 0;
+	$BossZones = [];
 	$ZoneMessages = [];
 
 	$ZonePaces[ $Planet ][ 'times' ][] = microtime( true );
@@ -299,15 +310,17 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			continue;
 		}
 
-		// Always join boss zone
+		// Store boss zone separately to ensure it has priority later
 		if( $Zone[ 'type' ] == 4 )
 		{
-			return $Zone;
+			$BossZones[] = $Zone;
 		}
 		else if( $Zone[ 'type' ] != 3 )
 		{
 			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
+
+		$Cutoff = 0.99;
 
 		if( isset( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) )
 		{
@@ -325,16 +338,10 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 
 			$TimeDelta = array_sum( $DifferenceTimes ) / count( $DifferenceTimes );
 			$PaceCutoff = ( array_sum( $Differences ) / count( $Differences ) ) * $TimeDelta;
-			$Cutoff = 1.0 - max( 0.1, $PaceCutoff ) / 1.05;
+			$Cutoff = 1.0 - max( 0.01, $PaceCutoff / 7 );
 			$PaceTime = $PaceCutoff > 0 ? ceil( ( 1 - $Zone[ 'capture_progress' ] ) / $PaceCutoff * $WaitTime ) : 1000;
 
-			if( 60 * 3 >= $PaceTime )
-			{
-				// If zone will finish soon, skip it
-				$Cutoff = 0.10;
-			}
-
-			if( $PaceCutoff > 0.02 )
+			if( $PaceCutoff > 0.015 )
 			{
 				$Minutes = floor( $PaceTime / 60 );
 				$Seconds = $PaceTime % 60;
@@ -353,14 +360,9 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 				];
 			}
 		}
-		else
-		{
-			// If we just started and don't have any pace information, play it safe
-			$Cutoff = 0.80;
-		}
 
-		// If a zone is close to completion, skip it because Valve does not reward points
-		// and replies with 42 NoMatch instead
+		// If a zone is close to completion, skip it because we want to avoid joining a completed zone
+		// Valve now rewards points, if the zone is completed before submission
 		if( $Zone[ 'capture_progress' ] >= $Cutoff )
 		{
 			continue;
@@ -373,7 +375,6 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			case 1: $LowZones++; break;
 		}
 
-		$Zone[ 'cutoff' ] = $Cutoff;
 		$CleanZones[] = $Zone;
 	}
 
@@ -403,6 +404,11 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		array_shift( $ZonePaces[ $Planet ][ 'times' ] );
 	}
 
+	if( !empty( $BossZones ) )
+	{
+		$CleanZones = $BossZones;
+	}
+
 	if( empty( $CleanZones ) )
 	{
 		return false;
@@ -412,6 +418,11 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	{
 		if( $b[ 'difficulty' ] === $a[ 'difficulty' ] )
 		{
+			if( (int)( $a[ 'capture_progress' ] * 100 ) !== (int)( $b[ 'capture_progress' ] * 100 ) )
+			{
+				return (int)( $a[ 'capture_progress' ] * 100000 ) - (int)( $b[ 'capture_progress' ] * 100000 );
+			}
+
 			return $b[ 'zone_position' ] - $a[ 'zone_position' ];
 		}
 		
@@ -427,7 +438,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	];
 }
 
-function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $WaitTime )
+function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 {
 	$Planets = SendGET( 'ITerritoryControlMinigameService/GetPlanets', 'active_only=1&language=english' );
 
@@ -440,6 +451,8 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 	foreach( $Planets as &$Planet )
 	{
+		$Planet[ 'sort_key' ] = 0;
+
 		if( empty( $Planet[ 'state' ][ 'capture_progress' ] ) )
 		{
 			$Planet[ 'state' ][ 'capture_progress' ] = 0.0;
@@ -449,8 +462,6 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 		{
 			$Planet[ 'state' ][ 'current_players' ] = 0;
 		}
-
-		$KnownPlanets[ $Planet[ 'id' ] ] = true;
 
 		if( !isset( $ZonePaces[ $Planet[ 'id' ] ] ) )
 		{
@@ -469,7 +480,6 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 		if( $Zone === false )
 		{
 			$ZonePaces[ $Planet[ 'id' ] ] = [];
-			$SkippedPlanets[ $Planet[ 'id' ] ] = true;
 			$Planet[ 'high_zones' ] = 0;
 			$Planet[ 'medium_zones' ] = 0;
 			$Planet[ 'low_zones' ] = 0;
@@ -509,53 +519,40 @@ function GetBestPlanetAndZone( &$SkippedPlanets, &$KnownPlanets, &$ZonePaces, $W
 
 				return $Planet;
 			}
-		}
-	}
 
-	// https://bugs.php.net/bug.php?id=71454
-	unset( $Planet );
-
-	$Priority = [ 'high_zones', 'medium_zones', 'low_zones' ];
-
-	usort( $Planets, function( $a, $b ) use ( $Priority )
-	{
-		// Sort planets by least amount of zones
-		for( $i = 0; $i < 3; $i++ )
-		{
-			$Key = $Priority[ $i ];
-
-			if( $a[ $Key ] !== $b[ $Key ] )
+			if( $Planet[ 'low_zones' ] > 0 )
 			{
-				return $a[ $Key ] - $b[ $Key ];
+				$Planet[ 'sort_key' ] += 99 - $Planet[ 'low_zones' ];
+			}
+
+			if( $Planet[ 'medium_zones' ] > 0 )
+			{
+				$Planet[ 'sort_key' ] += pow( 10, 2 ) * ( 99 - $Planet[ 'medium_zones' ] );
+			}
+
+			if( $Planet[ 'high_zones' ] > 0 )
+			{
+				$Planet[ 'sort_key' ] += pow( 10, 4 ) * ( 99 - $Planet[ 'high_zones' ] );
 			}
 		}
-
-		return $a[ 'id' ] - $b[ 'id' ];
-	} );
-
-	// Loop three times - first loop tries to find planet with hard zones, second loop - medium zones, and then easies
-	for( $i = 0; $i < 3; $i++ )
-	foreach( $Planets as &$Planet )
-	{
-		if( isset( $SkippedPlanets[ $Planet[ 'id' ] ] ) )
-		{
-			continue;
-		}
-
-		if( !$Planet[ $Priority[ $i ] ] )
-		{
-			continue;
-		}
-
-		if( !$Planet[ 'state' ][ 'captured' ] )
-		{
-			Msg( '>> Best Zone is {yellow}' . $Planet[ 'best_zone' ][ 'zone_position' ] . '{normal} on Planet {green}' . $Planet[ 'id' ] . ' (' . $Planet[ 'state' ][ 'name' ] . ')' );
-
-			return $Planet;
-		}
 	}
 
-	return $Planets[ 0 ];
+	usort( $Planets, function( $a, $b )
+	{
+		return $b[ 'sort_key' ] - $a[ 'sort_key' ];
+	} );
+
+	$Planet = $Planets[ 0 ];
+
+	Msg(
+		'>> Next Zone is {yellow}' . $Planet[ 'best_zone' ][ 'zone_position' ] .
+		'{normal} (Captured: {yellow}' . number_format( $Planet[ 'best_zone' ][ 'capture_progress' ] * 100, 2 ) . '%' .
+		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Planet[ 'best_zone' ] ) .
+		'{normal}) on Planet {green}' . $Planet[ 'id' ] .
+		' (' . $Planet[ 'state' ][ 'name' ] . ')'
+	);
+
+	return $Planet;
 }
 
 function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
@@ -586,8 +583,11 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 
 	if( $LeaveCurrentPlanet > 0 && $LeaveCurrentPlanet !== $ActivePlanet )
 	{
-		Msg( '   Leaving planet {yellow}' . $ActivePlanet . '{normal} because we want to be on {yellow}' . $LeaveCurrentPlanet );
-	
+		Msg( '   Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet );
+		Msg( '   Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h m\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
+
+		echo PHP_EOL;
+
 		SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $ActivePlanet );
 	}
 
@@ -629,7 +629,7 @@ function GetCurl( )
 			'Origin: https://steamcommunity.com',
 			'Referer: https://steamcommunity.com/saliengame/play/',
 			'Connection: Keep-Alive',
-			'Keep-Alive: 300'
+			'Keep-Alive: timeout=300'
 		],
 	] );
 
