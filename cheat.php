@@ -149,9 +149,11 @@ do
 		}
 	}
 
-	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' (+' . number_format( $SkippedLagTime, 3 ) . ' second lag) seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds (+' . number_format( $SkippedLagTime, 3 ) . ' seconds lag) before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
+
+	echo PHP_EOL;
 
 	do
 	{
@@ -590,7 +592,7 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 
 		if( isset( $Data[ 'response' ][ 'score' ] ) && !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) )
 		{
-			Msg( '{green}-- You are currently not representing any clan, Please select a clan at the game\'s page.' );
+			Msg( '{green}-- You are not representing any clan. Please select a clan from your browser:' );
 			Msg( '{yellow}https://store.steampowered.com/saliengame/play/' );
 		}
 	}
@@ -705,9 +707,7 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 
 			if( $EResult === 15 && $Method === 'ITerritoryControlMinigameService/RepresentClan' )  // EResult.AccessDenied
 			{
-				echo PHP_EOL;
-
-				Msg( '{green}You are not a part of the clan you want to represent' );
+				Msg( '{lightred}-- You are not representing any clan' );
 			}
 			else if( $EResult === 11 ) // EResult.InvalidState
 			{
