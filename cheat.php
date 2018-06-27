@@ -57,6 +57,7 @@ else
 	$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
 }
 
+$GameVersion = 1;
 $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
@@ -116,13 +117,15 @@ do
 	}
 
 	Msg(
-		'>> Joined Zone {yellow}' . $Zone[ 'zone_position' ] .
+		'++ Joined Zone {yellow}' . $Zone[ 'zone_position' ] .
 		'{normal} on Planet {green}' . $BestPlanetAndZone[ 'id' ] .
 		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
-		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
+		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone ) .
+		'{grey} (' . time() . ')'
 	);
 
-	$SkippedLagTime = floor( curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME ) );
+	$SkippedLagTime = curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME );
+	$SkippedLagTime -= fmod( $SkippedLagTime, 0.1 );
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
 	$WaitTimeBeforeFirstScan = 90 - $SkippedLagTime;
 	$PlanetCheckTime = microtime( true );
@@ -140,7 +143,7 @@ do
 		}
 	}
 
-	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 0 ) . ' seconds before rescanning planets...' );
+	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
@@ -160,17 +163,17 @@ do
 	}
 
 	$WaitedTimeAfterJoinZone = microtime( true ) - $WaitedTimeAfterJoinZone;
-	Msg( '   {grey}Waited ' . number_format( $WaitedTimeAfterJoinZone, 3 ) . ' (+' . number_format( $SkippedLagTime, 0 ) . ' second lag) total seconds before sending score' );
+	Msg( '   {grey}Waited ' . number_format( $WaitedTimeAfterJoinZone, 3 ) . ' (+' . number_format( $SkippedLagTime, 3 ) . ' second lag) total seconds before sending score {grey}(' . time() . ')' );
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
 	if( $Data[ 'eresult' ] == 93 )
 	{
-		$LagAdjustedWaitTime = $SkippedLagTime + 0.3;
+		$LagAdjustedWaitTime = min( 10, ceil( $SkippedLagTime + 0.3 ) );
 
-		Msg( '{lightred}-- EResult 93 means time is out of sync, trying again in ' . number_format( $LagAdjustedWaitTime, 3 ) . ' seconds...' );
+		Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' seconds...' );
 
-		usleep( $LagAdjustedWaitTime * 1000000 );
+		sleep( $LagAdjustedWaitTime );
 
 		$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 	}
@@ -188,7 +191,7 @@ do
 		}
 
 		Msg(
-			'>> Your Score: {lightred}' . number_format( $Data[ 'new_score' ] ) .
+			'++ Your Score: {lightred}' . number_format( $Data[ 'new_score' ] ) .
 			'{yellow} (+' . number_format( $Data[ 'new_score' ] - $OldScore ) . ')' .
 			'{normal} - Current Level: {green}' . $Data[ 'new_level' ] .
 			'{normal} (' . number_format( GetNextLevelProgress( $Data ) * 100, 2 ) . '%)'
@@ -210,6 +213,18 @@ do
 	}
 }
 while( true );
+
+function CheckGameVersion( $Data )
+{
+	global $GameVersion;
+
+	if( !isset( $Data[ 'response' ][ 'game_version' ] ) || $GameVersion >= $Data[ 'response' ][ 'game_version' ] )
+	{
+		return;
+	}
+
+	Msg( '{lightred}!! Game version changed to ' . $Data[ 'response' ][ 'game_version' ] );
+}
 
 function GetNextLevelProgress( $Data )
 {
@@ -442,6 +457,8 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 {
 	$Planets = SendGET( 'ITerritoryControlMinigameService/GetPlanets', 'active_only=1&language=english' );
+
+	CheckGameVersion( $Planets );
 
 	if( empty( $Planets[ 'response' ][ 'planets' ] ) )
 	{
@@ -698,6 +715,8 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 			}
 			else if( $EResult === 10 )
 			{
+				$Data = '{}'; // Retry this exact request
+
 				Msg( '{lightred}-- EResult 10 means Steam is busy' );
 			}
 		}
