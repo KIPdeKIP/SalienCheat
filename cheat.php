@@ -721,7 +721,7 @@ function GetRepositoryScriptHash( &$RepositoryScriptETag, $LocalScriptHash )
 	$Time = $Time - ( $Time % 10 );
 
 	curl_setopt_array( $c_r, [
-		CURLOPT_URL            => 'https://raw.githubusercontent.com/SteamDatabase/SalienCheat/master/cheat.php?_=' . $Time,
+		CURLOPT_URL            => 'https://raw.githubusercontent.com/KIPdeKIP/SalienCheat/master/cheat.php?' . $Time,
 		CURLOPT_USERAGENT      => 'SalienCheat (https://github.com/SteamDatabase/SalienCheat/)',
 		CURLOPT_RETURNTRANSFER => true,
 		CURLOPT_ENCODING       => 'gzip',
