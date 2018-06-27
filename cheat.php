@@ -3,6 +3,9 @@
 
 set_time_limit( 0 );
 
+// Disable update checking
+$_SERVER[ 'IGNORE_UPDATES' ] = true;
+
 if( !file_exists( __DIR__ . '/cacert.pem' ) )
 {
 	Msg( 'You forgot to download cacert.pem file' );
