@@ -778,7 +778,9 @@ function Msg( $Message, $EOL = PHP_EOL, $printf = [] )
 		$Message .= "\033[0m";
 	}
 
-	$Message = '[' . date( 'H:i:s' ) . '] ' . $Message . $EOL;
+	$Now = DateTime::createFromFormat( 'U.u', number_format( microtime( true ), 6, '.', '' ) );
+
+	$Message = '[' . $Now->format( 'H:i:s.v' ) . '] ' . $Message . $EOL;
 
 	if( !empty( $printf ) )
 	{
