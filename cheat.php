@@ -71,7 +71,7 @@ do
 {
 	$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 }
-while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
+while( !$BestPlanetAndZone );
 
 do
 {
@@ -99,13 +99,11 @@ do
 	{
 		Msg( '{lightred}!! Failed to join a zone, rescanning and restarting...' );
 
-		sleep( 1 );
-
 		do
 		{
 			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 		}
-		while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
+		while( !$BestPlanetAndZone );
 
 		continue;
 	}
@@ -150,7 +148,7 @@ do
 	{
 		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
 	}
-	while( !$BestPlanetAndZone && sleep( 5 ) === 0 );
+	while( !$BestPlanetAndZone );
 
 	$LagAdjustedWaitTime -= microtime( true ) - $PlanetCheckTime;
 
@@ -478,7 +476,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 		{
 			$Zone = GetPlanetState( $Planet[ 'id' ], $ZonePaces, $WaitTime );
 		}
-		while( $Zone === null && sleep( 5 ) === 0 );
+		while( $Zone === null );
 
 		if( $Zone === false )
 		{
@@ -689,8 +687,6 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 				echo PHP_EOL;
 
 				Msg( '{green}You are not a part of the clan you want to represent' );
-
-				sleep( 10 );
 			}
 			else if( $EResult === 42 && $Method === 'ITerritoryControlMinigameService/ReportScore' )
 			{
@@ -703,15 +699,13 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 			else if( $EResult === 10 )
 			{
 				Msg( '{lightred}-- EResult 10 means Steam is busy' );
-
-				sleep( 3 );
 			}
 		}
 
 		$Data = json_decode( $Data, true );
 		$Data[ 'eresult' ] = $EResult;
 	}
-	while( !isset( $Data[ 'response' ] ) && sleep( 1 ) === 0 );
+	while( !isset( $Data[ 'response' ] ) );
 
 	return $Data;
 }
