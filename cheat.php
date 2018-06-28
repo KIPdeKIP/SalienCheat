@@ -723,6 +723,8 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 				$Data = '{}'; // Retry this exact request
 
 				Msg( '{lightred}-- EResult 10 means Steam is busy' );
+
+				usleep( 500000 );
 			}
 		}
 
