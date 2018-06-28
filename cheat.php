@@ -696,6 +696,8 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 
 		preg_match( '/[Xx]-eresult: ([0-9]+)/', $Header, $EResult ) === 1 ? $EResult = (int)$EResult[ 1 ] : $EResult = 0;
 
+		global $LastError;
+
 		if( $EResult !== 1 )
 		{
 			Msg( '{lightred}!! ' . $Method . ' failed - EResult: ' . $EResult . ' - ' . $Data );
@@ -717,6 +719,11 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 			else if( $EResult === 0 ) // timeout
 			{
 				Msg( '{lightred}-- This problem should resolve itself, wait for a couple of minutes' );
+
+				if( $LastError === 0 )
+				{
+					usleep( 500000 );
+				}
 			}
 			else if( $EResult === 10 ) // EResult.Busy
 			{
@@ -724,9 +731,14 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 
 				Msg( '{lightred}-- EResult 10 means Steam is busy' );
 
-				usleep( 500000 );
+				if( $LastError === 10 )
+				{
+					usleep( 500000 );
+				}
 			}
 		}
+
+		$LastError = $EResult;
 
 		$Data = json_decode( $Data, true );
 		$Data[ 'eresult' ] = $EResult;
