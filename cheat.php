@@ -65,9 +65,9 @@ $LastKnownPlanet = 0;
 $LastKnownZone = 0;
 
 echo PHP_EOL;
-echo "   \033[37;44m                   SalienCheat                   \033[0m" . PHP_EOL;
-echo "   \033[30;42m             Updates can be found at             \033[0m" . PHP_EOL;
-echo "   \033[30;42m     https://github.com/KIPdeKIP/SalienCheat     \033[0m" . PHP_EOL;
+echo "   \033[37;44m                  SalienCheat                  \033[0m" . PHP_EOL;
+echo "   \033[30;42m            Updates can be found at            \033[0m" . PHP_EOL;
+echo "   \033[30;42m    https://github.com/KIPdeKIP/SalienCheat    \033[0m" . PHP_EOL;
 echo PHP_EOL;
 
 do
@@ -718,7 +718,7 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 			}
 			else if( $EResult === 0 ) // timeout
 			{
-				Msg( '{lightred}-- This problem should resolve itself, wait for a couple of minutes' );
+				Msg( '{lightred}-- This problem will resolve itself' );
 
 				if( $LastError === 0 )
 				{
@@ -729,7 +729,7 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 			{
 				$Data = '{}'; // Retry this exact request
 
-				Msg( '{lightred}-- EResult 10 means Steam is busy' );
+				Msg( '{lightred}-- Steam is currently busy' );
 
 				if( $LastError === 10 )
 				{
