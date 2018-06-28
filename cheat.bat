@@ -7,7 +7,7 @@ if not exist php.exe (
 )
 
 if not exist token.txt (
-	set /p token=Please get a token from here: https://steamcommunity.com/saliengame/gettoken and enter it: 
+	set /p token=Please copy your token from https://steamcommunity.com/saliengame/gettoken and enter it: 
 	echo !token! > token.txt
 )
 
