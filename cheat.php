@@ -254,7 +254,8 @@ function GetNextLevelProgress( $Data )
 		9600000, // Level 17
 		10800000, // Level 18
 		12000000, // Level 19
-		13200000, // Level 20
+		14600000, // Level 20
+		16800000, // Level 21
 	];
 
 	$PreviousLevel = $Data[ 'new_level' ] - 1;
@@ -429,8 +430,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	{
 		$CleanZones = $BossZones;
 	}
-
-	if( empty( $CleanZones ) )
+	else if( count( $CleanZones ) < 2 )
 	{
 		return false;
 	}
