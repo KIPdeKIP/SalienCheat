@@ -85,13 +85,13 @@ do
 		do
 		{
 			// Leave current game before trying to switch planets (it will report InvalidState otherwise)
-			$SteamThinksPlanet = LeaveCurrentGame( $Token, $BestPlanetAndZone[ 'id' ] );
+			$SteamThinksPlanet = LeaveCurrentGame( $WaitTime, $Token, $BestPlanetAndZone );
 
 			if( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet )
 			{
 				SendPOST( 'ITerritoryControlMinigameService/JoinPlanet', 'id=' . $BestPlanetAndZone[ 'id' ] . '&access_token=' . $Token );
 
-				$SteamThinksPlanet = LeaveCurrentGame( $Token );
+				$SteamThinksPlanet = LeaveCurrentGame( $WaitTime, $Token );
 			}
 		}
 		while( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet );
@@ -211,7 +211,7 @@ do
 			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
 
-		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Data[ 'next_level_score' ] );
+		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Data[ 'next_level_score' ], $Time );
 	}
 }
 while( true );
@@ -270,16 +270,18 @@ function GetNextLevelProgress( $Data )
 	return ( $Data[ 'new_score' ] - $ScoreTable[ $PreviousLevel ] ) / ( $Data[ 'next_level_score' ] - $ScoreTable[ $PreviousLevel ] );
 }
 
-function SetTitle( $Level, $Score, $NextLevelScore )
+function SetTitle( $Level, $Score, $NextLevelScore, $Time )
 {
-	$Time = ( $NextLevelScore - $Score ) / GetScoreForZone( [ 'difficulty' => 3 ] ) * 2;
 	$Hours = floor( $Time / 60 );
 	$Minutes = $Time % 60;
+	$Date = date_create();
+
+	date_add( $Date, date_interval_create_from_date_string( $Hours . " hours + " . $Minutes . " minutes" ) );
 
 	@cli_set_process_title(
 		'Level ' . $Level .
 		' (' . number_format( $Score ) . ' XP)' .
-		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm'
+		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 	);
 }
 
@@ -594,7 +596,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 	return $Planet;
 }
 
-function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
+function LeaveCurrentGame( $WaitTime, $Token, $LeaveCurrentPlanet = [ 'id' => 0 ] )
 {
 	do
 	{
@@ -613,7 +615,13 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 	}
 	while( !isset( $Data[ 'response' ][ 'score' ] ) );
 
-	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Data[ 'response' ][ 'next_level_score' ] );
+	if( !isset( $Time ) )
+	{
+		$WaitTimeSeconds = $WaitTime / 60;
+		$Time = ( ( $Data[ 'response' ][ 'next_level_score' ] - $Data[ 'response' ][ 'score' ] ) / GetScoreForZone( $LeaveCurrentPlanet[ 'best_zone' ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
+	}
+
+	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Data[ 'response' ][ 'next_level_score' ], $Time );
 
 	if( !isset( $Data[ 'response' ][ 'active_planet' ] ) )
 	{
@@ -622,9 +630,9 @@ function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 
 	$ActivePlanet = $Data[ 'response' ][ 'active_planet' ];
 
-	if( $LeaveCurrentPlanet > 0 && $LeaveCurrentPlanet !== $ActivePlanet )
+	if( $LeaveCurrentPlanet[ 'id' ] > 0 && $LeaveCurrentPlanet[ 'id' ] !== $ActivePlanet )
 	{
-		Msg( '   Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet );
+		Msg( '   Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet[ 'id' ] );
 		Msg( '   Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h m\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
 
 		echo PHP_EOL;
