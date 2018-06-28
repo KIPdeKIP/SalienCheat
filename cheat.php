@@ -62,7 +62,6 @@ $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
 $LastKnownPlanet = 0;
-$LastKnownZone = 0;
 
 echo PHP_EOL;
 echo "   \033[37;44m                  SalienCheat                  \033[0m" . PHP_EOL;
