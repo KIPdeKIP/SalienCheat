@@ -118,15 +118,10 @@ do
 
 	$Zone = $Zone[ 'response' ][ 'zone_info' ];
 
-	if( empty( $Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] ) )
-	{
-		$Zone[ 'response' ][ 'zone_info' ][ 'capture_progress' ] = 0.0;
-	}
-
 	Msg(
 		'++ Joined Zone {yellow}' . $Zone[ 'zone_position' ] .
 		'{normal} on Planet {green}' . $BestPlanetAndZone[ 'id' ] .
-		'{normal} - Captured: {yellow}' . number_format( $Zone[ 'capture_progress' ] * 100, 2 ) . '%' .
+		'{normal} - Captured: {yellow}' . number_format( empty( $Zone[ 'capture_progress' ] ) ? 0.0 : ( $Zone[ 'capture_progress' ] * 100 ), 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Zone )
 	);
 
@@ -256,8 +251,12 @@ function GetNextLevelProgress( $Data )
 		9600000, // Level 17
 		10800000, // Level 18
 		12000000, // Level 19
-		14600000, // Level 20
+		14400000, // Level 20
 		16800000, // Level 21
+		19200000, // Level 22
+		21600000, // Level 23
+		24000000, // Level 24
+		26400000, // Level 25
 	];
 
 	$PreviousLevel = $Data[ 'new_level' ] - 1;
