@@ -278,11 +278,13 @@ function SetTitle( $Level, $Score, $NextLevelScore, $Time )
 
 	date_add( $Date, date_interval_create_from_date_string( $Hours . " hours + " . $Minutes . " minutes" ) );
 
-	@cli_set_process_title(
-		'Level ' . $Level .
-		' (' . number_format( $Score ) . ' XP)' .
-		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
-	);
+	if (function_exists('cli_set_process_title')) {
+		@cli_set_process_title(
+			'Level ' . $Level .
+			' (' . number_format( $Score ) . ' XP)' .
+			' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
+		);
+	}
 }
 
 function GetScoreForZone( $Zone )
