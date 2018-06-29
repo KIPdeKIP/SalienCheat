@@ -272,19 +272,22 @@ function GetNextLevelProgress( $Data )
 
 function SetTitle( $Level, $Score, $NextLevelScore, $Time )
 {
+	if (!function_exists('cli_set_process_title'))
+	{
+		return;
+	}
+
 	$Hours = floor( $Time / 60 );
 	$Minutes = $Time % 60;
 	$Date = date_create();
 
 	date_add( $Date, date_interval_create_from_date_string( $Hours . " hours + " . $Minutes . " minutes" ) );
 
-	if (function_exists('cli_set_process_title')) {
-		@cli_set_process_title(
-			'Level ' . $Level .
-			' (' . number_format( $Score ) . ' XP)' .
-			' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
-		);
-	}
+	@cli_set_process_title(
+		'Level ' . $Level .
+		' (' . number_format( $Score ) . ' XP)' .
+		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
+	);
 }
 
 function GetScoreForZone( $Zone )
