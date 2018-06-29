@@ -69,6 +69,12 @@ echo "   \033[30;42m            Updates can be found at            \033[0m" . PH
 echo "   \033[30;42m    https://github.com/KIPdeKIP/SalienCheat    \033[0m" . PHP_EOL;
 echo PHP_EOL;
 
+if( ini_get( 'precision' ) < 18 )
+{
+	Msg( '{grey}Fixed PHP float precision. (Was ' . ini_get( 'precision' ) . ')' );
+	ini_set( 'precision', '18' );
+}
+
 do
 {
 	$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
