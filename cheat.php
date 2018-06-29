@@ -62,6 +62,7 @@ $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
 $LastKnownPlanet = 0;
+$BestPlanetAndZone = 0;
 
 echo PHP_EOL;
 echo "   \033[37;44m                  SalienCheat                  \033[0m" . PHP_EOL;
@@ -77,12 +78,15 @@ if( ini_get( 'precision' ) < 18 )
 
 do
 {
-	$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
-}
-while( !$BestPlanetAndZone );
+	if( !$BestPlanetAndZone )
+	{
+		do
+		{
+			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
+		}
+		while( !$BestPlanetAndZone );
+	}
 
-do
-{
 	echo PHP_EOL;
 
 	// Only get player info and leave current planet if it changed
@@ -112,12 +116,7 @@ do
 	if( empty( $Zone[ 'response' ][ 'zone_info' ] ) )
 	{
 		Msg( '{lightred}!! Failed to join a zone, rescanning and restarting...' );
-
-		do
-		{
-			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
-		}
-		while( !$BestPlanetAndZone );
+		$BestPlanetAndZone = 0;
 
 		continue;
 	}
