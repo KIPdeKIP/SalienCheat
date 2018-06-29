@@ -71,7 +71,7 @@ echo PHP_EOL;
 
 if( ini_get( 'precision' ) < 18 )
 {
-	Msg( '{grey}Fixed PHP float precision. (Was ' . ini_get( 'precision' ) . ')' );
+	Msg( '{teal}Fixed PHP float precision. (Was ' . ini_get( 'precision' ) . ')' );
 	ini_set( 'precision', '18' );
 }
 
@@ -149,7 +149,7 @@ do
 		}
 	}
 
-	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds (+' . number_format( $SkippedLagTime, 3 ) . ' seconds lag) before rescanning planets...' );
+	Msg( '   {teal}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' seconds (+' . number_format( $SkippedLagTime, 3 ) . ' seconds lag) before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
@@ -165,7 +165,7 @@ do
 
 	if( $LagAdjustedWaitTime > 0 )
 	{
-		Msg( '   {grey}Waiting ' . number_format( $LagAdjustedWaitTime, 3 ) . ' remaining seconds before submitting score...' );
+		Msg( '   {teal}Waiting ' . number_format( $LagAdjustedWaitTime, 3 ) . ' remaining seconds before submitting score...' );
 
 		usleep( $LagAdjustedWaitTime * 1000000 );
 	}
@@ -830,7 +830,7 @@ function Msg( $Message, $EOL = PHP_EOL, $printf = [] )
 			'{green}',
 			'{yellow}',
 			'{lightred}',
-			'{grey}',
+			'{teal}',
 		],
 		[
 			"\033[0m",
