@@ -71,7 +71,7 @@ Msg( "{background-blue}Welcome to SalienCheat for SteamDB" );
 
 if( ini_get( 'precision' ) < 18 )
 {
-	Msg( '{grey}Fixed php float precision (was ' . ini_get( 'precision' ) . ')' );
+	Msg( '{teal}Fixed php float precision (was ' . ini_get( 'precision' ) . ')' );
 	ini_set( 'precision', '18' );
 }
 
@@ -86,7 +86,7 @@ do
 			Msg( '{green}-- You are currently not representing any clan, so you are now part of SteamDB' );
 			Msg( '{green}-- Make sure to join{yellow} https://steamcommunity.com/groups/steamdb {green}on Steam' );
 
-			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=4777282&access_token=' . $Token );
+			SendPOST( 'ITerritoryControlMinigameService/RepresentClan', 'clanid=' . $ClanId . '&access_token=' . $Token );
 		}
 		else if( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] != 4777282 )
 		{
@@ -116,13 +116,13 @@ do
 		do
 		{
 			// Leave current game before trying to switch planets (it will report InvalidState otherwise)
-			$SteamThinksPlanet = LeaveCurrentGame( $Token, $ClanId, $BestPlanetAndZone[ 'id' ] );
+			$SteamThinksPlanet = LeaveCurrentGame( $Token, $BestPlanetAndZone[ 'id' ] );
 
 			if( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet )
 			{
 				SendPOST( 'ITerritoryControlMinigameService/JoinPlanet', 'id=' . $BestPlanetAndZone[ 'id' ] . '&access_token=' . $Token );
 
-				$SteamThinksPlanet = LeaveCurrentGame( $Token, $ClanId );
+				$SteamThinksPlanet = LeaveCurrentGame( $Token );
 			}
 		}
 		while( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet && sleep( 1 ) === 0 );
@@ -163,7 +163,7 @@ do
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
 	$WaitTimeBeforeFirstScan = 50 + ( 50 - $SkippedLagTime );
 
-	Msg( '   {grey}Waiting ' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' (+' . number_format( $SkippedLagTime, 3 ) . ' second lag) seconds before rescanning planets...' );
+	Msg( '   {teal}Waiting {green}' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' {teal}(+{green}' . number_format( $SkippedLagTime, 3 ) . ' {teal}second lag) seconds before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
@@ -177,17 +177,17 @@ do
 
 	if( $LagAdjustedWaitTime > 0 )
 	{
-		Msg( '   {grey}Waiting {green}' . number_format( $LagAdjustedWaitTime, 3 ) . ' {grey}remaining seconds before submitting score...' );
+		Msg( '   {teal}Waiting {green}' . number_format( $LagAdjustedWaitTime, 3 ) . ' {teal}remaining seconds before submitting score...' );
 
 		usleep( $LagAdjustedWaitTime * 1000000 );
 	}
 
 	$TotalWait = microtime( true ) - $PlanetCheckTime;
-	Msg( '   {grey}Submitting score. Waited {green}' . number_format( $TotalWait, 3 ) . ' {grey}seconds.' );
+	Msg( '   {teal}Submitting score. Waited {green}' . number_format( $TotalWait, 3 ) . ' {teal}seconds.' );
 
 	$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
 
-	if( $Data[ 'eresult' ] == 93 )
+	if( empty( $Data[ 'response' ][ 'new_score' ] ) )
 	{
 		$LagAdjustedWaitTime = min( 10, round( $SkippedLagTime ) );
 
@@ -362,7 +362,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
 
-		$Cutoff = 0.99;
+		$Cutoff = $Zone[ 'difficulty' ] < 2 ? 0.90 : 0.99;
 
 		if( isset( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) )
 		{
@@ -380,7 +380,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 
 			$TimeDelta = array_sum( $DifferenceTimes ) / count( $DifferenceTimes );
 			$PaceCutoff = ( array_sum( $Differences ) / count( $Differences ) ) * $TimeDelta;
-			$Cutoff = 1.0 - max( 0.01, $PaceCutoff / 7 );
+			$Cutoff = 1.0 - max( 1.0 - $Cutoff, $PaceCutoff / 7 );
 			$PaceTime = $PaceCutoff > 0 ? ceil( ( 1 - $Zone[ 'capture_progress' ] ) / $PaceCutoff * $WaitTime ) : 1000;
 
 			if( $PaceCutoff > 0.015 )
@@ -595,7 +595,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 	return $Planet;
 }
 
-function LeaveCurrentGame( $Token, $ClanId, $LeaveCurrentPlanet = 0 )
+function LeaveCurrentGame( $Token, $LeaveCurrentPlanet = 0 )
 {
 	do
 	{
@@ -618,7 +618,7 @@ function LeaveCurrentGame( $Token, $ClanId, $LeaveCurrentPlanet = 0 )
 	if( $LeaveCurrentPlanet > 0 && $LeaveCurrentPlanet !== $ActivePlanet )
 	{
 		Msg( '   Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet );
-		Msg( '   Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h m\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
+		Msg( '   Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h i\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
 
 		echo PHP_EOL;
 
@@ -650,18 +650,15 @@ function GetCurl( )
 	$c = curl_init( );
 
 	curl_setopt_array( $c, [
-		CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3464.0 Safari/537.36',
+		CURLOPT_USERAGENT      => 'SalienCheat (https://github.com/SteamDatabase/SalienCheat/)',
 		CURLOPT_RETURNTRANSFER => true,
-		CURLOPT_ENCODING       => 'gzip',
+		CURLOPT_ENCODING       => '', // Let curl decide best encoding on its own
 		CURLOPT_TIMEOUT        => 30,
 		CURLOPT_CONNECTTIMEOUT => 10,
 		CURLOPT_HEADER         => 1,
 		CURLOPT_CAINFO         => __DIR__ . '/cacert.pem',
 		CURLOPT_HTTPHEADER     =>
 		[
-			'Accept: */*',
-			'Origin: https://steamcommunity.com',
-			'Referer: https://steamcommunity.com/saliengame/play',
 			'Connection: Keep-Alive',
 			'Keep-Alive: timeout=300'
 		],
@@ -800,7 +797,7 @@ function Msg( $Message, $EOL = PHP_EOL, $printf = [] )
 			'{green}',
 			'{yellow}',
 			'{lightred}',
-			'{grey}',
+			'{teal}',
 			'{background-blue}',
 		],
 		$DisableColors ? '' : [
