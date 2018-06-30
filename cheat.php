@@ -1,7 +1,11 @@
 #!/usr/bin/env php
 <?php
 
+Msg( "{background-blue}Welcome to SalienCheat for SteamDB" );
+
 set_time_limit( 0 );
+error_reporting( -1 );
+ini_set( 'display_errors', '1' );
 
 if( !file_exists( __DIR__ . '/cacert.pem' ) )
 {
@@ -9,21 +13,31 @@ if( !file_exists( __DIR__ . '/cacert.pem' ) )
 	exit( 1 );
 }
 
+// Pass env ACCOUNTID, get it from salien page source code called 'gAccountID'
+$AccountID = isset( $_SERVER[ 'ACCOUNTID' ] ) ? (int)$_SERVER[ 'ACCOUNTID' ] : 0;
+
 $ClanId = getenv('CLAN_ID');
 
 if( !is_string( $ClanId ) )
 {
 	$ClanId = '4777282'; // steamdb
 }
-if( $argc === 2 )
+
+if( $argc > 1 )
 {
 	$Token = $argv[ 1 ];
+
+	if( $argc > 2 )
+	{
+		$AccountID = $argv[ 2 ];
+	}
 }
 else if( isset( $_SERVER[ 'TOKEN' ] ) )
 {
 	// if the token was provided as an env var, use it
 	$Token = $_SERVER[ 'TOKEN' ];
 }
+
 else
 {
 	// otherwise, read it from disk
@@ -37,6 +51,14 @@ else
 	else if( isset( $ParsedToken[ 'token' ] ) )
 	{
 		$Token = $ParsedToken[ 'token' ];
+		$AccountID = GetAccountID( $ParsedToken[ 'steamid' ] );
+
+		Msg( 'Your SteamID is {teal}' . $ParsedToken[ 'steamid' ] . '{normal} - AccountID is {teal}' . $AccountID );
+
+		if( $AccountID == 0 && $ParsedToken[ 'steamid' ] > 0 )
+		{
+			Msg( '{lightred}Looks like you are using 32bit PHP. Try enabling "gmp" module for correct accountid calculation.' );
+		}
 	}
 
 	unset( $ParsedToken );
@@ -48,15 +70,15 @@ if( strlen( $Token ) !== 32 )
 	exit( 1 );
 }
 
-// Pass env ACCOUNTID, get it from salien page source code called 'gAccountID'
-$AccountID = isset( $_SERVER[ 'ACCOUNTID' ] ) ? (int)$_SERVER[ 'ACCOUNTID' ] : 0;
-
 
 // 10/10 code
 $DisableColors = !(
 	( function_exists( 'sapi_windows_vt100_support' ) && sapi_windows_vt100_support( STDOUT ) ) ||
 	( function_exists( 'stream_isatty' ) && stream_isatty( STDOUT ) ) ||
-	( function_exists( 'posix_isatty' ) && posix_isatty( STDOUT ) )
+	( function_exists( 'posix_isatty' ) && posix_isatty( STDOUT ) ) ||
+	( false !== getenv( 'ANSICON' ) ) ||
+	( 'ON' === getenv( 'ConEmuANSI' ) ) ||
+	( substr( getenv( 'TERM' ), 0, 5 ) === 'xterm' )
 );
 
 if( isset( $_SERVER[ 'DISABLE_COLORS' ] ) )
@@ -71,8 +93,7 @@ $ZonePaces = [];
 $OldScore = 0;
 $LastKnownPlanet = 0;
 $BestPlanetAndZone = 0;
-
-Msg( "{background-blue}Welcome to SalienCheat for SteamDB" );
+$PreferLowZones = 0;
 
 if( ini_get( 'precision' ) < 18 )
 {
@@ -86,6 +107,8 @@ do
 
 	if( isset( $Data[ 'response' ][ 'score' ] ) )
 	{
+		$OldScore = $Data[ 'response' ][ 'score' ];
+
 		if( !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) )
 		{
 			Msg( '{green}-- You are currently not representing any clan, so you are now part of SteamDB' );
@@ -101,9 +124,19 @@ do
 			Msg( '{green}--{yellow} https://steamcommunity.com/saliengame/play' );
 			Msg( '{green}-- Happy farming!' );
 		}
+
+		if( $Data[ 'response' ][ 'level' ] > 20 )
+		{
+			$PreferLowZones = 1;
+		}
 	}
 }
 while( !isset( $Data[ 'response' ][ 'score' ] ) && sleep( $FailSleep ) === 0 );
+
+if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
+{
+	$PreferLowZones = (bool)$_SERVER[ 'PREFER_LOW_ZONES' ];
+}
 
 do
 {
@@ -111,7 +144,7 @@ do
 	{
 		do
 		{
-			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime, $FailSleep );
+			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $PreferLowZones, $WaitTime, $FailSleep );
 		}
 		while( !$BestPlanetAndZone && sleep( $FailSleep ) === 0 );
 	}
@@ -165,7 +198,7 @@ do
 			if( microtime( true ) >= $NextHeal )
 			{
 				$UseHeal = 1;
-				$NextHeal = microtime( true ) + mt_rand( 120, 130 );
+				$NextHeal = microtime( true ) + 120;
 
 				Msg( '{teal}@@ Using heal ability' );
 			}
@@ -188,7 +221,10 @@ do
 				continue;
 			}
 
-			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use ( $AccountID )
+			// Strip names down to basic ASCII.
+			$RegMask = '/[\x00-\x1F\x7F-\xFF]/';
+
+			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use ( $AccountID, $RegMask )
 			{
 				if( $a[ 'accountid' ] == $AccountID )
 				{
@@ -199,22 +235,27 @@ do
 					return -1;
 				}
 
-				if( $b[ 'xp_earned' ] == $a[ 'xp_earned' ] )
-				{
-					return $b[ 'hp' ] - $a[ 'hp' ];
-				}
-
-				return $b[ 'xp_earned' ] - $a[ 'xp_earned' ];
+				return strcmp( preg_replace( $RegMask, '', $a['name'] ), preg_replace( $RegMask, '', $b['name'] ) );
 			} );
+
+			$MyPlayer = null;
 
 			foreach( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ] as $Player )
 			{
+				$IsThisMe = $Player[ 'accountid' ] == $AccountID;
+				$DefaultColor = $IsThisMe ? '{green}' : '{normal}';
+
+				if( $IsThisMe )
+				{
+					$MyPlayer = $Player;
+				}
+
 				Msg(
-					( $Player[ 'accountid' ] == $AccountID ? '{green}@@' : '  ' ) .
-					' Player %9d - HP: %6s / %6s - Score: %10s',
+					( $IsThisMe ? '{green}@@' : '  ' ) .
+					' %-20s - HP: {yellow}%6s' . $DefaultColor  . ' / %6s - Score Gained: {yellow}%10s' . $DefaultColor,
 					PHP_EOL,
 					[
-						$Player[ 'accountid' ],
+						substr( preg_replace( $RegMask, '', $Player[ 'name' ] ), 0, 20 ),
 						$Player[ 'hp' ],
 						$Player[ 'max_hp' ],
 						number_format( $Player[ 'xp_earned' ] )
@@ -229,8 +270,6 @@ do
 				$BestPlanetAndZone = 0;
 				$LastKnownPlanet = 0;
 
-				print_r( $Data );
-
 				break;
 			}
 
@@ -239,11 +278,15 @@ do
 				Msg( '{green}@@ Waiting for players...' );
 				continue;
 			}
-			else
+
+			Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
+
+			if( $MyPlayer !== null )
 			{
-				Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
-				echo PHP_EOL;
+				Msg( '@@ Start: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' (L' . $MyPlayer[ 'level_on_join' ] . ') - Current: ' . number_format( $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ] ) . ' (' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{lightred}' : '' ) . 'L' . $MyPlayer[ 'new_level' ] );
 			}
+
+			echo PHP_EOL;
 		}
 		while( sleep( 5 ) === 0 );
 
@@ -285,9 +328,18 @@ do
 
 	do
 	{
-		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime, $FailSleep );
+		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $PreferLowZones, $WaitTime, $FailSleep );
 	}
 	while( !$BestPlanetAndZone && sleep( $FailSleep ) === 0 );
+
+	if( $BestPlanetAndZone[ 'best_zone' ][ 'boss_active' ] )
+	{
+		Msg( '{green}Boss detected, abandoning current zone and joining boss...' );
+
+		$LastKnownPlanet = 0;
+
+		continue;
+	}
 
 	$LagAdjustedWaitTime -= microtime( true ) - $PlanetCheckTime;
 
@@ -347,6 +399,11 @@ do
 			'{normal} - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) .
 			'{normal} - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
+
+		if( $Data[ 'new_level' ] > 20 && !isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
+		{
+			$PreferLowZones = 1;
+		}
 	}
 }
 while( true );
@@ -436,7 +493,7 @@ function GetNameForDifficulty( $Zone )
 	return $Boss . $Difficulty;
 }
 
-function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
+function GetPlanetState( $Planet, &$ZonePaces, $PreferLowZones, $WaitTime )
 {
 	$Zones = SendGET( 'ITerritoryControlMinigameService/GetPlanet', 'id=' . $Planet . '&language=english' );
 
@@ -479,7 +536,13 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			$BossZones[] = $Zone;
 		}
 
-		$Cutoff = $Zone[ 'difficulty' ] < 2 ? 0.90 : 0.99;
+		// Skip zone 0 if it's not a boss, since it's currently not allowing joins on new planets.
+		if ( $Zone[ 'zone_position' ] == 0 )
+		{
+			continue;
+		}
+
+		$Cutoff = ( $Zone[ 'difficulty' ] < 2 && !$PreferLowZones ) ? 0.90 : 0.99;
 
 		if( isset( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) )
 		{
@@ -572,12 +635,13 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		return false;
 	}
 
-	usort( $CleanZones, function( $a, $b )
+	usort( $CleanZones, function( $a, $b ) use( $PreferLowZones )
 	{
 		if( $b[ 'difficulty' ] === $a[ 'difficulty' ] )
 		{
 			return rand( -1, 1 );
 		}
+
 		
 		return $b[ 'difficulty' ] - $a[ 'difficulty' ];
 	} );
@@ -591,7 +655,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	];
 }
 
-function GetBestPlanetAndZone( &$ZonePaces, $WaitTime, $FailSleep )
+function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime, $FailSleep )
 {
 	$Planets = SendGET( 'ITerritoryControlMinigameService/GetPlanets', 'active_only=1&language=english' );
 
@@ -603,6 +667,14 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime, $FailSleep )
 	}
 
 	$Planets = $Planets[ 'response' ][ 'planets' ];
+
+	usort( $Planets, function( $a, $b )
+	{
+		$a = isset( $a[ 'state' ][ 'boss_zone_position' ] ) ? 1000 : $a[ 'id' ];
+		$b = isset( $b[ 'state' ][ 'boss_zone_position' ] ) ? 1000 : $b[ 'id' ];
+
+		return $b - $a;
+	} );
 
 	foreach( $Planets as &$Planet )
 	{
@@ -628,7 +700,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime, $FailSleep )
 
 		do
 		{
-			$Zone = GetPlanetState( $Planet[ 'id' ], $ZonePaces, $WaitTime );
+			$Zone = GetPlanetState( $Planet[ 'id' ], $ZonePaces, $PreferLowZones, $WaitTime );
 		}
 		while( $Zone === null && sleep( $FailSleep ) === 0 );
 
@@ -690,6 +762,11 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime, $FailSleep )
 			if( $Planet[ 'high_zones' ] > 0 )
 			{
 				$Planet[ 'sort_key' ] += pow( 10, 4 ) * ( 99 - $Planet[ 'high_zones' ] );
+			}
+
+			if( $PreferLowZones )
+			{
+				$Planet[ 'sort_key' ] *= -1;
 			}
 		}
 	}
@@ -844,7 +921,7 @@ function ExecuteRequest( $Method, $URL, $Data = [] )
 
 				sleep( 10 );
 			}
-			else if( $EResult === 11 ) // EResult.InvalidState
+			else if( $EResult === 11 || $EResult === 27 ) // EResult.InvalidState || EResult.Expired
 			{
 				global $LastKnownPlanet;
 				$LastKnownPlanet = 0;
@@ -907,6 +984,20 @@ function GetRepositoryScriptHash( &$RepositoryScriptETag, $LocalScriptHash )
 	}
 
 	return strlen( $Data ) > 0 ? sha1( trim( $Data ) ) : $LocalScriptHash;
+}
+
+function GetAccountID( $SteamID )
+{
+	if( PHP_INT_SIZE === 8 )
+	{
+		return $SteamID & 0xFFFFFFFF;
+	}
+	else if( function_exists( 'gmp_and' ) )
+	{
+		return gmp_and( $SteamID, '0xFFFFFFFF' );
+	}
+
+	return 0;
 }
 
 function Msg( $Message, $EOL = PHP_EOL, $printf = [] )
