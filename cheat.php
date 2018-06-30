@@ -11,6 +11,14 @@ if( !file_exists( __DIR__ . '/cacert.pem' ) )
 	exit( 1 );
 }
 
+if( ini_get( 'precision' ) < 18 )
+{
+	$OldPrecision = ini_get( 'precision' );
+	ini_set( 'precision', '18' );
+	Msg( '>> {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
+	echo PHP_EOL;
+}
+
 // Pass env ACCOUNTID, get it from salien page source code called 'gAccountID'
 $AccountID = isset( $_SERVER[ 'ACCOUNTID' ] ) ? (int)$_SERVER[ 'ACCOUNTID' ] : 0;
 
@@ -93,14 +101,6 @@ echo "   \033[37;44m                SalienCheat " . $ScriptVersion . "          
 echo "   \033[30;42m            Updates can be found at            \033[0m" . PHP_EOL;
 echo "   \033[30;42m    https://github.com/KIPdeKIP/SalienCheat    \033[0m" . PHP_EOL;
 echo PHP_EOL;
-
-if( ini_get( 'precision' ) < 18 )
-{
-	$OldPrecision = ini_get( 'precision' );
-	ini_set( 'precision', '18' );
-	Msg( '>> {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
-	echo PHP_EOL;
-}
 
 if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
 {
