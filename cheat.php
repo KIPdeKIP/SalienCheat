@@ -62,6 +62,7 @@ else
 }
 
 $GameVersion = 2;
+$ScriptVersion = '0.8';
 $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
@@ -69,7 +70,7 @@ $LastKnownPlanet = 0;
 $BestPlanetAndZone = 0;
 
 echo PHP_EOL;
-echo "   \033[37;44m                  SalienCheat                  \033[0m" . PHP_EOL;
+echo "   \033[37;44m                SalienCheat " . $ScriptVersion . "                \033[0m" . PHP_EOL;
 echo "   \033[30;42m            Updates can be found at            \033[0m" . PHP_EOL;
 echo "   \033[30;42m    https://github.com/KIPdeKIP/SalienCheat    \033[0m" . PHP_EOL;
 echo PHP_EOL;
