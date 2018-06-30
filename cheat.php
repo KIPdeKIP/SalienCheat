@@ -322,7 +322,7 @@ do
 	$LagAdjustedWaitTime = $WaitTime - $SkippedLagTime;
 	$WaitTimeBeforeFirstScan = $WaitTime - $SkippedLagTime - 10;
 
-	Msg( '   {teal}Waiting {green}' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' {teal}(+{green}' . number_format( $SkippedLagTime, 3 ) . ' {teal}second lag) seconds before rescanning planets...' );
+	Msg( '>> {teal}Waiting {green}' . number_format( $WaitTimeBeforeFirstScan, 3 ) . ' {teal}(+{green}' . number_format( $SkippedLagTime, 3 ) . ' {teal}second lag) seconds before rescanning planets...' );
 
 	usleep( $WaitTimeBeforeFirstScan * 1000000 );
 
@@ -345,7 +345,7 @@ do
 
 	if( $LagAdjustedWaitTime > 0 )
 	{
-		Msg( '   {teal}Waiting {green}' . number_format( $LagAdjustedWaitTime, 3 ) . ' {teal}remaining seconds before submitting score...' );
+		Msg( '>> {teal}Waiting {green}' . number_format( $LagAdjustedWaitTime, 3 ) . ' {teal}remaining seconds before submitting score...' );
 
 		usleep( $LagAdjustedWaitTime * 1000000 );
 	}
@@ -359,8 +359,14 @@ do
 	{
 		$LagAdjustedWaitTime = min( 10, round( $SkippedLagTime ) );
 
-		Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' seconds...' );
-
+		if( $LagAdjustedWaitTime != 1 )
+		{
+			Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' seconds...' );
+		} else 
+		{
+			Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' second...' );
+		}
+		
 		sleep( $LagAdjustedWaitTime );
 
 		$Data = SendPOST( 'ITerritoryControlMinigameService/ReportScore', 'access_token=' . $Token . '&score=' . GetScoreForZone( $Zone ) . '&language=english' );
@@ -570,7 +576,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $PreferLowZones, $WaitTime )
 
 				$ZoneMessages[] =
 				[
-					'     Zone {yellow}%3d{normal} - Captured: {yellow}%5s%%{normal} - Cutoff: {yellow}%5s%%{normal} - Pace: {yellow}%6s%%{normal} - ETA: {yellow}%2dm %2ds{normal}',
+					'     ├── Zone {yellow}%3d{normal} - Captured: {yellow}%5s%%{normal} - Cutoff: {yellow}%5s%%{normal} - Pace: {yellow}%6s%%{normal} - ETA: {yellow}%2dm %2ds{normal}',
 					[
 						$Zone[ 'zone_position' ],
 						number_format( $Zone[ 'capture_progress' ] * 100, 2 ),
@@ -816,8 +822,8 @@ function LeaveCurrentGame( $Token, $FailSleep, $LeaveCurrentPlanet = 0 )
 
 	if( $LeaveCurrentPlanet > 0 && $LeaveCurrentPlanet !== $ActivePlanet )
 	{
-		Msg( '   Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet );
-		Msg( '   Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h i\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
+		Msg( '   >> Leaving planet {green}' . $ActivePlanet . '{normal} because we want to be on {green}' . $LeaveCurrentPlanet );
+		Msg( '   >> Time accumulated on planet {green}' . $ActivePlanet . '{normal}: {yellow}' . gmdate( 'H\h i\m s\s', $Data[ 'response' ][ 'time_on_planet' ] ) );
 
 		echo PHP_EOL;
 
