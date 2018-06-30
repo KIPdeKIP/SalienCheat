@@ -85,6 +85,7 @@ if( ini_get( 'precision' ) < 18 )
 	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
 	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
+	echo PHP_EOL;
 }
 
 if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
