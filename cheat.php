@@ -43,11 +43,11 @@ else
 		$Token = $ParsedToken[ 'token' ];
 		$AccountID = GetAccountID( $ParsedToken[ 'steamid' ] );
 
-		Msg( 'Your SteamID is {teal}' . $ParsedToken[ 'steamid' ] . '{normal} - AccountID is {teal}' . $AccountID );
+		Msg( '>> Your SteamID is {teal}' . $ParsedToken[ 'steamid' ] . '{normal} - AccountID is {teal}' . $AccountID );
 
 		if( $AccountID == 0 && $ParsedToken[ 'steamid' ] > 0 )
 		{
-			Msg( '{lightred}32-bit versions of PHP are not supported.' );
+			Msg( '{lightred}!! 32-bit versions of PHP are not supported.' );
 		}
 	}
 
@@ -61,7 +61,7 @@ if( strlen( $Token ) !== 32 )
 }
 
 $LocalScriptHash = sha1( trim( file_get_contents( __FILE__ ) ) );
-Msg( '{teal}File hash is ' . substr( $LocalScriptHash, 0, 8 ) );
+Msg( '>> File hash is {teal}' . substr( $LocalScriptHash, 0, 8 ) );
 
 if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
 {
@@ -98,7 +98,7 @@ if( ini_get( 'precision' ) < 18 )
 {
 	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
-	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
+	Msg( '>> {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
 	echo PHP_EOL;
 }
 
@@ -308,7 +308,7 @@ do
 
 		if( $LocalScriptHash !== $RepositoryScriptHash )
 		{
-			Msg( '-- {lightred}Script has been updated on GitHub since you started this script, please make sure to update.' );
+			Msg( '{lightred}-- Script has been updated on GitHub since you started this script, please make sure to update.' );
 		}
 	}
 
@@ -836,8 +836,8 @@ function LeaveCurrentGame( $WaitTime, $Token, $LeaveCurrentPlanet = [ 'id' => 0 
 
 		if( isset( $Data[ 'response' ][ 'score' ] ) && !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) )
 		{
-			Msg( '{green}-- You are not representing any clan. Please select a clan from your browser:' );
-			Msg( '{yellow}https://store.steampowered.com/saliengame/play/' );
+			Msg( '{lightred}-- You are not representing any clan. Please select a clan from your browser:' );
+			Msg( '{lightred}-- https://store.steampowered.com/saliengame/play/' );
 		}
 	}
 	while( !isset( $Data[ 'response' ][ 'score' ] ) );
