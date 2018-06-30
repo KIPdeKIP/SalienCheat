@@ -18,7 +18,11 @@ $AccountID = isset( $_SERVER[ 'ACCOUNTID' ] ) ? (int)$_SERVER[ 'ACCOUNTID' ] : 0
 if( $argc > 1 )
 {
 	$Token = $argv[ 1 ];
-	$AccountID = $argc > 2 ? $argv[ 2 ] : 0;
+
+	if( $argc > 2 )
+	{
+		$AccountID = $argv[ 2 ];
+	}
 }
 else if( isset( $_SERVER[ 'TOKEN' ] ) )
 {
@@ -295,6 +299,15 @@ do
 	}
 	while( !$BestPlanetAndZone );
 
+	if( $BestPlanetAndZone[ 'best_zone' ][ 'boss_active' ] )
+	{
+		Msg( '{green}Boss detected, abandoning current zone and joining boss...' );
+
+		$LastKnownPlanet = 0;
+
+		continue;
+	}
+
 	$LagAdjustedWaitTime -= microtime( true ) - $PlanetCheckTime;
 
 	if( $LagAdjustedWaitTime > 0 )
@@ -510,7 +523,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $PreferLowZones, $WaitTime )
 			continue;
 		}
 
-		$Cutoff = $Zone[ 'difficulty' ] < 2 ? 0.90 : 0.99;
+		$Cutoff = ( $Zone[ 'difficulty' ] < 2 && !$PreferLowZones ) ? 0.90 : 0.99;
 
 		if( isset( $ZonePaces[ $Planet ][ $Zone[ 'zone_position' ] ] ) )
 		{
@@ -644,6 +657,14 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 	}
 
 	$Planets = $Planets[ 'response' ][ 'planets' ];
+
+	usort( $Planets, function( $a, $b )
+	{
+		$a = isset( $a[ 'state' ][ 'boss_zone_position' ] ) ? 1000 : $a[ 'id' ];
+		$b = isset( $b[ 'state' ][ 'boss_zone_position' ] ) ? 1000 : $b[ 'id' ];
+
+		return $b - $a;
+	} );
 
 	foreach( $Planets as &$Planet )
 	{
