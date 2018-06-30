@@ -414,10 +414,6 @@ do
 			'{normal} - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
 
-		if( $Data[ 'new_level' ] > 20 )
-		{
-			$RandomizeZone = 1;
-		}
 	}
 }
 while( true );
