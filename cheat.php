@@ -7,15 +7,17 @@ ini_set( 'display_errors', '1' );
 
 if( !file_exists( __DIR__ . '/cacert.pem' ) )
 {
-	Msg( 'You forgot to download cacert.pem file' );
+	echo 'You forgot to download cacert.pem file';
 	exit( 1 );
 }
+
+$EarlyMessages = [];
 
 if( ini_get( 'precision' ) < 18 )
 {
 	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
-	Msg( '>> {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
+	$EarlyMessages[] = '>> Fixed PHP float precision setting it to {teal}' . ini_get( 'precision' ) . '{normal}. (Was {teal}' . $OldPrecision . '{normal})';
 	echo PHP_EOL;
 }
 
@@ -51,11 +53,11 @@ else
 		$Token = $ParsedToken[ 'token' ];
 		$AccountID = GetAccountID( $ParsedToken[ 'steamid' ] );
 
-		Msg( '>> Your SteamID is {teal}' . $ParsedToken[ 'steamid' ] . '{normal} - AccountID is {teal}' . $AccountID );
+		$EarlyMessages[] = '>> Your SteamID is {teal}' . $ParsedToken[ 'steamid' ] . '{normal} - AccountID is {teal}' . $AccountID;
 
 		if( $AccountID == 0 && $ParsedToken[ 'steamid' ] > 0 )
 		{
-			Msg( '{lightred}!! 32-bit versions of PHP are not supported.' );
+			$EarlyMessages[] = '{lightred}!! 32-bit versions of PHP are not supported.';
 		}
 	}
 
@@ -69,7 +71,7 @@ if( strlen( $Token ) !== 32 )
 }
 
 $LocalScriptHash = sha1( trim( file_get_contents( __FILE__ ) ) );
-Msg( '>> File hash is {teal}' . substr( $LocalScriptHash, 0, 8 ) );
+$EarlyMessages[] = '>> File hash is {teal}' . substr( $LocalScriptHash, 0, 8 );
 
 if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
 {
@@ -101,6 +103,15 @@ echo "   \033[37;44m                SalienCheat " . $ScriptVersion . "          
 echo "   \033[30;42m            Updates can be found at            \033[0m" . PHP_EOL;
 echo "   \033[30;42m    https://github.com/KIPdeKIP/SalienCheat    \033[0m" . PHP_EOL;
 echo PHP_EOL;
+
+foreach( $EarlyMessages as $EarlyMsg )
+{
+	Msg( $EarlyMsg );
+}
+
+if( count( $EarlyMessages ) > 0 ) {
+	echo PHP_EOL;
+}
 
 if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
 {
