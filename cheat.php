@@ -47,7 +47,7 @@ else
 
 		if( $AccountID == 0 && $ParsedToken[ 'steamid' ] > 0 )
 		{
-			Msg( '{lightred}Looks like you are using 32bit PHP. Try enabling "gmp" module for correct accountid calculation.' );
+			Msg( '{lightred}32-bit versions of PHP are not supported.' );
 		}
 	}
 
