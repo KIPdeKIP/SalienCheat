@@ -123,11 +123,6 @@ do
 			Msg( '{green}--{yellow} https://steamcommunity.com/saliengame/play' );
 			Msg( '{green}-- Happy farming!' );
 		}
-
-		if( $Data[ 'response' ][ 'level' ] > 20 )
-		{
-			$RandomizeZone = 1;
-		}
 	}
 }
 while( !isset( $Data[ 'response' ][ 'score' ] ) && sleep( $FailSleep ) === 0 );
