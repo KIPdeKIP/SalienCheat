@@ -357,14 +357,14 @@ do
 
 	if( $Data[ 'eresult' ] == 93 )
 	{
-		$LagAdjustedWaitTime = min( 10, ceil( $SkippedLagTime + 0.3 ) );
+		$LagAdjustedWaitTime = max( 1, min( 10, ceil( $SkippedLagTime + 0.3 ) ) );
 
 		if( $LagAdjustedWaitTime != 1 )
 		{
-			Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' seconds...' );
+			Msg( '{lightred}-- Report score failed, trying again in ' . $LagAdjustedWaitTime . ' seconds...' );
 		} else
 		{
-			Msg( '{lightred}-- Time is out of sync, trying again in ' . $LagAdjustedWaitTime . ' second...' );
+			Msg( '{lightred}-- Report score failed, trying again in ' . $LagAdjustedWaitTime . ' second...' );
 		}
 
 		sleep( $LagAdjustedWaitTime );
