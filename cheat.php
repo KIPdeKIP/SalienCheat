@@ -76,8 +76,9 @@ echo PHP_EOL;
 
 if( ini_get( 'precision' ) < 18 )
 {
-	Msg( '{teal}Fixed PHP float precision. (Was ' . ini_get( 'precision' ) . ')' );
+	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
+	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
 }
 
 do
