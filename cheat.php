@@ -159,7 +159,7 @@ do
 		do
 		{
 			$UseHeal = 0;
-			$DamageToBoss = rand( 40, 90 );
+			$DamageToBoss = rand( 80, 90 );
 			$DamageTaken = 0;
 
 			if( microtime( true ) >= $NextHeal )
