@@ -31,7 +31,7 @@ else if( isset( $_SERVER[ 'TOKEN' ] ) )
 else
 {
 	// otherwise, read it from disk
-	$Token = trim( file_get_contents( __DIR__ . '/token.txt' ) );
+	$Token = trim( file_get_contents( __DIR__ . '/gettoken.json' ) );
 	$ParsedToken = json_decode( $Token, true );
 
 	if( is_string( $ParsedToken ) )
@@ -56,7 +56,7 @@ else
 
 if( strlen( $Token ) !== 32 )
 {
-	Msg( 'Failed to find your token. Verify token.txt' );
+	Msg( 'Failed to find your token. Verify gettoken.json' );
 	exit( 1 );
 }
 
