@@ -132,7 +132,7 @@ do
 		}
 
 		$BossFailsAllowed = 10;
-		$NextHeal = microtime( true ) + mt_rand( 120, 180 );
+		$NextHeal = microtime( true ) + mt_rand( 120, 130 );
 
 		do
 		{
