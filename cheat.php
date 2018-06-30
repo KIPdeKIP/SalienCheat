@@ -71,6 +71,7 @@ $ZonePaces = [];
 $OldScore = 0;
 $LastKnownPlanet = 0;
 $BestPlanetAndZone = 0;
+$PreferLowZones = 0;
 
 echo PHP_EOL;
 echo "   \033[37;44m                SalienCheat " . $ScriptVersion . "                \033[0m" . PHP_EOL;
@@ -85,13 +86,18 @@ if( ini_get( 'precision' ) < 18 )
 	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
 }
 
+if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
+{
+	$PreferLowZones = (bool)$_SERVER[ 'PREFER_LOW_ZONES' ];
+}
+
 do
 {
 	if( !$BestPlanetAndZone )
 	{
 		do
 		{
-			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
+			$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $PreferLowZones, $WaitTime );
 		}
 		while( !$BestPlanetAndZone );
 	}
@@ -285,7 +291,7 @@ do
 
 	do
 	{
-		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $WaitTime );
+		$BestPlanetAndZone = GetBestPlanetAndZone( $ZonePaces, $PreferLowZones, $WaitTime );
 	}
 	while( !$BestPlanetAndZone );
 
@@ -455,7 +461,7 @@ function GetNameForDifficulty( $Zone )
 	return $Boss . $Difficulty;
 }
 
-function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
+function GetPlanetState( $Planet, &$ZonePaces, $PreferLowZones, $WaitTime )
 {
 	$Zones = SendGET( 'ITerritoryControlMinigameService/GetPlanet', 'id=' . $Planet . '&language=english' );
 
@@ -597,7 +603,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 		return false;
 	}
 
-	usort( $CleanZones, function( $a, $b )
+	usort( $CleanZones, function( $a, $b ) use( $PreferLowZones )
 	{
 		if( $b[ 'difficulty' ] === $a[ 'difficulty' ] )
 		{
@@ -607,6 +613,11 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			}
 
 			return $b[ 'zone_position' ] - $a[ 'zone_position' ];
+		}
+
+		if( $PreferLowZones )
+		{
+			return $a[ 'difficulty' ] - $b[ 'difficulty' ];
 		}
 
 		return $b[ 'difficulty' ] - $a[ 'difficulty' ];
@@ -621,7 +632,7 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 	];
 }
 
-function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
+function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 {
 	$Planets = SendGET( 'ITerritoryControlMinigameService/GetPlanets', 'active_only=1&language=english' );
 
@@ -658,7 +669,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 
 		do
 		{
-			$Zone = GetPlanetState( $Planet[ 'id' ], $ZonePaces, $WaitTime );
+			$Zone = GetPlanetState( $Planet[ 'id' ], $ZonePaces, $PreferLowZones, $WaitTime );
 		}
 		while( $Zone === null );
 
@@ -720,6 +731,11 @@ function GetBestPlanetAndZone( &$ZonePaces, $WaitTime )
 			if( $Planet[ 'high_zones' ] > 0 )
 			{
 				$Planet[ 'sort_key' ] += pow( 10, 4 ) * ( 99 - $Planet[ 'high_zones' ] );
+			}
+
+			if( $PreferLowZones )
+			{
+				$Planet[ 'sort_key' ] *= -1;
 			}
 		}
 	}
