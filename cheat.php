@@ -153,6 +153,9 @@ do
 			continue;
 		}
 
+		// Avoid first time not sync error
+		sleep( 4 );
+
 		$BossFailsAllowed = 10;
 		$NextHeal = microtime( true ) + mt_rand( 120, 130 );
 
@@ -171,6 +174,16 @@ do
 			}
 
 			$Data = SendPOST( 'ITerritoryControlMinigameService/ReportBossDamage', 'access_token=' . $Token . '&use_heal_ability=' . $UseHeal . '&damage_to_boss=' . $DamageToBoss . '&damage_taken=' . $DamageTaken );
+
+			if( $Data[ 'eresult' ] == 11 )
+			{
+				Msg( '{green}@@ Got invalid state, restarting...' );
+
+				$BestPlanetAndZone = 0;
+				$LastKnownPlanet = 0;
+
+				break;
+			}
 
 			if( $Data[ 'eresult' ] != 1 && $BossFailsAllowed-- < 1 )
 			{
@@ -547,12 +560,6 @@ function GetPlanetState( $Planet, &$ZonePaces, $PreferLowZones, $WaitTime )
 		if( $Zone[ 'type' ] == 4 && $Zone[ 'boss_active' ] )
 		{
 			$BossZones[] = $Zone;
-		}
-
-		// Skip zone 0 if it's not a boss, since it's currently not allowing joins on new planets.
-		if ( $Zone[ 'zone_position' ] == 0 )
-		{
-			continue;
 		}
 
 		$Cutoff = ( $Zone[ 'difficulty' ] < 2 && !$PreferLowZones ) ? 0.90 : 0.99;
