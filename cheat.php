@@ -3,9 +3,6 @@
 
 set_time_limit( 0 );
 
-// Disable update checking
-$_SERVER[ 'IGNORE_UPDATES' ] = true;
-
 if( !file_exists( __DIR__ . '/cacert.pem' ) )
 {
 	Msg( 'You forgot to download cacert.pem file' );
@@ -88,6 +85,11 @@ if( ini_get( 'precision' ) < 18 )
 	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
 	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
+}
+
+if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
+{
+	$_SERVER[ 'IGNORE_UPDATES' ] = true;
 }
 
 if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
