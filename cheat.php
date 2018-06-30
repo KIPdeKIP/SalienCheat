@@ -832,7 +832,7 @@ function LeaveCurrentGame( $WaitTime, $Token, $LeaveCurrentPlanet = [ 'id' => 0 
 	if( !isset( $Time ) )
 	{
 		$WaitTimeSeconds = $WaitTime / 60;
-		$Time = ( ( $Data[ 'response' ][ 'next_level_score' ] - $Data[ 'response' ][ 'score' ] ) / GetScoreForZone( $LeaveCurrentPlanet[ 'best_zone' ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
+		$Time = ( ( $Data[ 'response' ][ 'next_level_score' ] - $Data[ 'response' ][ 'score' ] ) / GetScoreForZone( isset( $LeaveCurrentPlanet[ 'best_zone' ] ) ? $LeaveCurrentPlanet[ 'best_zone' ] : [ 'difficulty' => 3 ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
 	}
 
 	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Data[ 'response' ][ 'next_level_score' ], $Time );
