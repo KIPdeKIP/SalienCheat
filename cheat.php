@@ -194,6 +194,10 @@ do
 				{
 					return 1;
 				}
+				else if( $b[ 'accountid' ] == $AccountID )
+				{
+					return -1;
+				}
 
 				if( $b[ 'xp_earned' ] == $a[ 'xp_earned' ] )
 				{
