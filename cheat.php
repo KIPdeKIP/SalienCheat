@@ -154,7 +154,7 @@ do
 		}
 
 		$BossFailsAllowed = 10;
-		$NextHeal = microtime( true ) + 120;
+		$NextHeal = microtime( true ) + mt_rand( 120, 300 );
 
 		do
 		{
@@ -165,7 +165,7 @@ do
 			if( microtime( true ) >= $NextHeal )
 			{
 				$UseHeal = 1;
-				$NextHeal = microtime( true ) + 120;
+				$NextHeal = microtime( true ) + mt_rand( 120, 300 );
 
 				Msg( '{teal}@@ Using heal ability' );
 			}
@@ -212,7 +212,8 @@ do
 			}
 			else
 			{
-				Msg( '{green}@@ Boss HP: ' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . ' / ' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) );
+				Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
+				echo PHP_EOL;
 			}
 		}
 		while( sleep( 5 ) === 0 );
