@@ -53,6 +53,11 @@ if( strlen( $Token ) !== 32 )
 	exit( 1 );
 }
 
+if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
+{
+	$_SERVER[ 'IGNORE_UPDATES' ] = true;
+}
+
 if( isset( $_SERVER[ 'IGNORE_UPDATES' ] ) && (bool)$_SERVER[ 'IGNORE_UPDATES' ] )
 {
 	$UpdateCheck = false;
@@ -86,11 +91,6 @@ if( ini_get( 'precision' ) < 18 )
 	ini_set( 'precision', '18' );
 	Msg( '   {teal}Fixed PHP float precision setting it to ' . ini_get( 'precision' ) . '. (Was ' . $OldPrecision . ')' );
 	echo PHP_EOL;
-}
-
-if( !isset( $_SERVER[ 'IGNORE_UPDATES' ] ) )
-{
-	$_SERVER[ 'IGNORE_UPDATES' ] = true;
 }
 
 if( isset( $_SERVER[ 'PREFER_LOW_ZONES' ] ) )
