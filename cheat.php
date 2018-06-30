@@ -154,7 +154,7 @@ do
 		}
 
 		$BossFailsAllowed = 10;
-		$NextHeal = microtime( true ) + mt_rand( 120, 300 );
+		$NextHeal = microtime( true ) + mt_rand( 120, 130 );
 
 		do
 		{
@@ -165,7 +165,7 @@ do
 			if( microtime( true ) >= $NextHeal )
 			{
 				$UseHeal = 1;
-				$NextHeal = microtime( true ) + mt_rand( 120, 300 );
+				$NextHeal = microtime( true ) + mt_rand( 120, 130 );
 
 				Msg( '{teal}@@ Using heal ability' );
 			}
