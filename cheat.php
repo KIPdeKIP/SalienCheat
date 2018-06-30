@@ -45,6 +45,9 @@ if( strlen( $Token ) !== 32 )
 	exit( 1 );
 }
 
+// Pass env ACCOUNTID, get it from salien page source code called 'gAccountID'
+$AccountID = isset( $_SERVER[ 'ACCOUNTID' ] ) ? (int)$_SERVER[ 'ACCOUNTID' ] : 0;
+
 if( isset( $_SERVER[ 'IGNORE_UPDATES' ] ) && (bool)$_SERVER[ 'IGNORE_UPDATES' ] )
 {
 	$UpdateCheck = false;
@@ -57,7 +60,7 @@ else
 	$RepositoryScriptHash = GetRepositoryScriptHash( $RepositoryScriptETag, $LocalScriptHash );
 }
 
-$GameVersion = 1;
+$GameVersion = 2;
 $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
@@ -107,6 +110,114 @@ do
 		while( $BestPlanetAndZone[ 'id' ] !== $SteamThinksPlanet );
 
 		$LastKnownPlanet = $BestPlanetAndZone[ 'id' ];
+	}
+
+	if( $BestPlanetAndZone[ 'best_zone' ][ 'boss_active' ] )
+	{
+		$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinBossZone', 'zone_position=' . $BestPlanetAndZone[ 'best_zone' ][ 'zone_position' ] . '&access_token=' . $Token );
+
+		if( $Zone[ 'eresult' ] != 1 )
+		{
+			Msg( '{lightred}!! Failed to join boss zone, rescanning and restarting...' );
+
+			$BestPlanetAndZone = 0;
+
+			continue;
+		}
+
+		$BossFailsAllowed = 10;
+		$NextHeal = microtime( true ) + mt_rand( 120, 180 );
+
+		do
+		{
+			$UseHeal = 0;
+			$DamageToBoss = 1;
+			$DamageTaken = 0;
+
+			if( microtime( true ) >= $NextHeal )
+			{
+				$UseHeal = 1;
+				$NextHeal = microtime( true ) + 120;
+
+				Msg( '{teal}@@ Using heal ability' );
+			}
+
+			$Data = SendPOST( 'ITerritoryControlMinigameService/ReportBossDamage', 'access_token=' . $Token . '&use_heal_ability=' . $UseHeal . '&damage_to_boss=' . $DamageToBoss . '&damage_taken=' . $DamageTaken );
+
+			if( $Data[ 'eresult' ] != 1 && $BossFailsAllowed-- < 1 )
+			{
+				Msg( '{green}@@ Boss battle errored too much, restarting...' );
+
+				$BestPlanetAndZone = 0;
+				$LastKnownPlanet = 0;
+
+				break;
+			}
+
+			if( empty( $Data[ 'response' ][ 'boss_status' ] ) )
+			{
+				Msg( '{green}@@ Waiting...' );
+				continue;
+			}
+
+			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use ( $AccountID )
+			{
+				if( $a[ 'accountid' ] == $AccountID )
+				{
+					return 1;
+				}
+				else if( $b[ 'accountid' ] == $AccountID )
+				{
+					return -1;
+				}
+
+				if( $b[ 'xp_earned' ] == $a[ 'xp_earned' ] )
+				{
+					return $b[ 'hp' ] - $a[ 'hp' ];
+				}
+
+				return $b[ 'xp_earned' ] - $a[ 'xp_earned' ];
+			} );
+
+			foreach( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ] as $Player )
+			{
+				Msg(
+					( $Player[ 'accountid' ] == $AccountID ? '{green}@@' : '  ' ) .
+					' Player %9d - HP: %6s / %6s - Score: %10s',
+					PHP_EOL,
+					[
+						$Player[ 'accountid' ],
+						$Player[ 'hp' ],
+						$Player[ 'max_hp' ],
+						number_format( $Player[ 'xp_earned' ] )
+					]
+				);
+			}
+
+			if( $Data[ 'response' ][ 'game_over' ] )
+			{
+				Msg( '{green}@@ Boss battle is over.' );
+
+				$BestPlanetAndZone = 0;
+				$LastKnownPlanet = 0;
+
+				break;
+			}
+
+			if( $Data[ 'response' ][ 'waiting_for_players' ] )
+			{
+				Msg( '{green}@@ Waiting for players...' );
+				continue;
+			}
+			else
+			{
+				Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
+				echo PHP_EOL;
+			}
+		}
+		while( true );
+
+		continue;
 	}
 
 	$Zone = SendPOST( 'ITerritoryControlMinigameService/JoinZone', 'zone_position=' . $BestPlanetAndZone[ 'best_zone' ][ 'zone_position' ] . '&access_token=' . $Token );
@@ -353,19 +464,20 @@ function GetPlanetState( $Planet, &$ZonePaces, $WaitTime )
 			$Zone[ 'capture_progress' ] = 0.0;
 		}
 
+		if( !isset( $Zone[ 'boss_active' ] ) )
+		{
+			$Zone[ 'boss_active' ] = false;
+		}
+
 		if( $Zone[ 'captured' ] )
 		{
 			continue;
 		}
 
 		// Store boss zone separately to ensure it has priority later
-		if( $Zone[ 'type' ] == 4 )
+		if( $Zone[ 'type' ] == 4 && $Zone[ 'boss_active' ] )
 		{
 			$BossZones[] = $Zone;
-		}
-		else if( $Zone[ 'type' ] != 3 )
-		{
-			Msg( '{lightred}!! Unknown zone type: ' . $Zone[ 'type' ] );
 		}
 
 		$Cutoff = $Zone[ 'difficulty' ] < 2 ? 0.90 : 0.99;
@@ -615,6 +727,11 @@ function LeaveCurrentGame( $WaitTime, $Token, $LeaveCurrentPlanet = [ 'id' => 0 
 		if( isset( $Data[ 'response' ][ 'active_zone_game' ] ) )
 		{
 			SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_zone_game' ] );
+		}
+
+		if( isset( $Data[ 'response' ][ 'active_boss_game' ] ) )
+		{
+			SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_boss_game' ] );
 		}
 
 		if( isset( $Data[ 'response' ][ 'score' ] ) && !isset( $Data[ 'response' ][ 'clan_info' ][ 'accountid' ] ) )
