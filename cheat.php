@@ -56,7 +56,7 @@ else
 
 if( strlen( $Token ) !== 32 )
 {
-	Msg( 'Failed to find your token. Verify gettoken.json' );
+	echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page in its entirety into this folder as gettoken.json';
 	exit( 1 );
 }
 
