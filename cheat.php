@@ -255,7 +255,7 @@ do
 
 			echo PHP_EOL;
 		}
-		while( true );
+		while( sleep( 5 ) === 0 );
 
 		continue;
 	}
