@@ -252,7 +252,7 @@ do
 
 				Msg(
 					( $IsThisMe ? '{green}@@' : '  ' ) .
-					' %-20s - HP: {yellow}%6s' . $DefaultColor  . ' / %6s - Score Gained: {yellow}%10s' . $DefaultColor,
+					' %-20s - HP: {yellow}%6s' . $DefaultColor  . ' / %6s - XP Gained: {yellow}%10s' . $DefaultColor,
 					PHP_EOL,
 					[
 						substr( preg_replace( $RegMask, '', $Player[ 'name' ] ), 0, 20 ),
@@ -279,16 +279,16 @@ do
 				continue;
 			}
 
-			Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
-
 			if( $MyPlayer !== null )
 			{
-				Msg( '@@ Start: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' (L' . $MyPlayer[ 'level_on_join' ] . ') - Current: ' . number_format( $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ] ) . ' (' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{lightred}' : '' ) . 'L' . $MyPlayer[ 'new_level' ] );
+				Msg( '@@ Started XP: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' {teal}(L' . $MyPlayer[ 'level_on_join' ] . '){normal} - Current XP: {yellow}' . number_format( $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ] ) . ' ' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{green}' : '{teal}' ) . '(L' . $MyPlayer[ 'new_level' ] . ')' );
 			}
+
+			Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
 
 			echo PHP_EOL;
 		}
-		while( sleep( 5 ) === 0 );
+		while( BossSleep( $c ) );
 
 		continue;
 	}
@@ -413,6 +413,20 @@ do
 	}
 }
 while( true );
+
+function BossSleep( $c )
+{
+	$SkippedLagTime = curl_getinfo( $c, CURLINFO_TOTAL_TIME ) - curl_getinfo( $c, CURLINFO_STARTTRANSFER_TIME );
+	$SkippedLagTime -= fmod( $SkippedLagTime, 0.1 );
+	$LagAdjustedWaitTime = 5 - $SkippedLagTime;
+
+	if( $LagAdjustedWaitTime > 0 )
+	{
+		usleep( $LagAdjustedWaitTime * 1000000 );
+	}
+
+	return true;
+}
 
 function CheckGameVersion( $Data )
 {
