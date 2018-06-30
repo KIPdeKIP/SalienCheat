@@ -165,7 +165,7 @@ do
 				$NextHeal = microtime( true ) + 120;
 			}
 
-			$Data = SendPOST( 'ITerritoryControlMinigameService/ReportBossDamage', 'access_token=' . $Token . '&use_heal_ability=' . $UseHeal . '&damage_to_boss=' . rand( 40, 100 ) . '&damage_taken=' . rand( 20, 80 ) );
+			$Data = SendPOST( 'ITerritoryControlMinigameService/ReportBossDamage', 'access_token=' . $Token . '&use_heal_ability=' . $UseHeal . '&damage_to_boss=' . rand( 40, 100 ) . '&damage_taken=0' );
 
 			if( $Data[ 'eresult' ] != 1 && $BossFailsAllowed-- < 1 )
 			{
