@@ -26,7 +26,6 @@ if( ini_get( 'precision' ) < 18 )
 	$OldPrecision = ini_get( 'precision' );
 	ini_set( 'precision', '18' );
 	$EarlyMessages[] = '>> Fixed PHP float precision setting it to {teal}' . ini_get( 'precision' ) . '{normal}. (Was {teal}' . $OldPrecision . '{normal})';
-	echo PHP_EOL;
 }
 
 // Pass env ACCOUNTID, get it from salien page source code called 'gAccountID'
