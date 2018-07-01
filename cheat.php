@@ -288,6 +288,24 @@ do
 		}
 		while( BossSleep( $c ) );
 
+		$Data = SendPOST( 'ITerritoryControlMinigameService/GetPlayerInfo', 'access_token=' . $Token );
+
+		if( isset( $Data[ 'response' ][ 'score' ] ) )
+		{
+			Msg(
+				'++ Your Score after Boss battle: {lightred}' . number_format( $Data[ 'score' ] ) .
+				'{yellow} (+' . number_format( $Data[ 'score' ] - $OldScore ) . ')' .
+				'{normal} - Level: {green}' . $Data[ 'level' ]
+			);
+ 
+			$OldScore = $Data[ 'response' ][ 'score' ];
+		}
+
+		if( isset( $Data[ 'response' ][ 'active_boss_game' ] ) )
+		{
+			SendPOST( 'IMiniGameService/LeaveGame', 'access_token=' . $Token . '&gameid=' . $Data[ 'response' ][ 'active_boss_game' ] );
+		}
+
 		continue;
 	}
 
