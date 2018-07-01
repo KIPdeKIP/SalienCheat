@@ -179,20 +179,22 @@ do
 		sleep( 4 );
 
 		$BossFailsAllowed = 10;
-		$NextHeal = microtime( true ) + mt_rand( 120, 130 );
+		$NextHeal = PHP_INT_MAX;
+		$WaitingForPlayers = true;
+		$MyScoreInBoss = 0;
 
 		do
 		{
+			$Time = microtime( true );
 			$UseHeal = 0;
-			$DamageToBoss = 1;
+			// Do more damage in hopes of getting a harder boss next time
+			$DamageToBoss = $WaitingForPlayers ? 0 : mt_rand( 1, 40 );
 			$DamageTaken = 0;
 
-			if( microtime( true ) >= $NextHeal )
+			if( $Time >= $NextHeal )
 			{
 				$UseHeal = 1;
-				$NextHeal = microtime( true ) + 120;
-
-				Msg( '{teal}@@ Using heal ability' );
+				$NextHeal = $Time + 120;
 			}
 
 			$Data = SendPOST( 'ITerritoryControlMinigameService/ReportBossDamage', 'access_token=' . $Token . '&use_heal_ability=' . $UseHeal . '&damage_to_boss=' . $DamageToBoss . '&damage_taken=' . $DamageTaken );
@@ -217,6 +219,18 @@ do
 				break;
 			}
 
+			if( $Data[ 'response' ][ 'waiting_for_players' ] )
+			{
+				$WaitingForPlayers = true;
+				Msg( '{green}@@ Waiting for players...' );
+				continue;
+			}
+			else if( $WaitingForPlayers )
+			{
+				$WaitingForPlayers = false;
+				$NextHeal = $Time + mt_rand( 0, 120 );
+			}
+
 			if( empty( $Data[ 'response' ][ 'boss_status' ] ) )
 			{
 				Msg( '{green}@@ Waiting...' );
@@ -226,7 +240,7 @@ do
 			// Strip names down to basic ASCII.
 			$RegMask = '/[\x00-\x1F\x7F-\xFF]/';
 
-			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use ( $AccountID, $RegMask )
+			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use( $AccountID )
 			{
 				if( $a[ 'accountid' ] == $AccountID )
 				{
@@ -237,7 +251,7 @@ do
 					return -1;
 				}
 
-				return strcmp( preg_replace( $RegMask, '', $a['name'] ), preg_replace( $RegMask, '', $b['name'] ) );
+				return $b[ 'accountid' ] - $a[ 'accountid' ];
 			} );
 
 			$MyPlayer = null;
@@ -252,12 +266,14 @@ do
 					$MyPlayer = $Player;
 				}
 
+				$Name = trim( preg_replace( $RegMask, '', $Player[ 'name' ] ) );
+
 				Msg(
 					( $IsThisMe ? '{green}@@' : '  ' ) .
 					' %-20s - HP: {yellow}%6s' . $DefaultColor  . ' / %6s - XP Gained: {yellow}%10s' . $DefaultColor,
 					PHP_EOL,
 					[
-						substr( preg_replace( $RegMask, '', $Player[ 'name' ] ), 0, 20 ),
+						empty( $Name ) ? ( '[U:1:' . $Player[ 'accountid' ] . ']' ) : substr( $Name, 0, 20 ),
 						$Player[ 'hp' ],
 						$Player[ 'max_hp' ],
 						number_format( $Player[ 'xp_earned' ] )
@@ -275,22 +291,30 @@ do
 				break;
 			}
 
-			if( $Data[ 'response' ][ 'waiting_for_players' ] )
-			{
-				Msg( '{green}@@ Waiting for players...' );
-				continue;
-			}
-
 			if( $MyPlayer !== null )
 			{
-				Msg( '@@ Started XP: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' {teal}(L' . $MyPlayer[ 'level_on_join' ] . '){normal} - Current XP: {yellow}' . number_format( $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ] ) . ' ' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{green}' : '{teal}' ) . '(L' . $MyPlayer[ 'new_level' ] . ')' );
+				$MyScoreInBoss = $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ];
+
+				Msg( '@@ Started XP: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' {teal}(L' . $MyPlayer[ 'level_on_join' ] . '){normal} - Current XP: {yellow}' . number_format( $MyScoreInBoss ) . ' ' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{green}' : '{teal}' ) . '(L' . $MyPlayer[ 'new_level' ] . ')' );
 			}
 
 			Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
 
+			Msg( '{yellow}@@ Damage sent: {green}' . $DamageToBoss . '{yellow} - ' . ( $UseHeal ? '{green}Used heal ability!' : 'Next heal in {green}' . round( $NextHeal - $Time ) . '{yellow} seconds' ) );
+
 			echo PHP_EOL;
 		}
 		while( BossSleep( $c ) );
+
+		if( $MyScoreInBoss > 0 )
+		{
+			Msg(
+				'++ Your Score after Boss battle: {lightred}' . number_format( $MyScoreInBoss ) .
+				'{yellow} (+' . number_format( $MyScoreInBoss - $OldScore ) . ')'
+			);
+
+			$OldScore = $MyScoreInBoss;
+		}
 
 		continue;
 	}
@@ -395,19 +419,14 @@ do
 		);
 
 		$OldScore = $Data[ 'new_score' ];
-		$WaitTimeSeconds = $WaitTime / 60;
-		$Time = ( ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => $Zone[ 'difficulty' ] ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
-		$Hours = floor( $Time / 60 );
-		$Minutes = $Time % 60;
-		$Date = date_create();
 
-		date_add( $Date, date_interval_create_from_date_string( $Hours . " hours + " . $Minutes . " minutes" ) );
-
-		Msg(
-			'>> Next Level: {yellow}' . number_format( $Data[ 'next_level_score' ] ) .
-			'{normal} - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) .
-			'{normal} - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
-		);
+		if( isset( $Data[ 'next_level_score' ] ) )
+		{
+			Msg(
+				'>> Next Level: {yellow}' . number_format( $Data[ 'next_level_score' ] ) .
+				'{normal} - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] )
+			);
+		}
 
 	}
 }
@@ -441,6 +460,11 @@ function CheckGameVersion( $Data )
 
 function GetNextLevelProgress( $Data )
 {
+	if( !isset( $Data[ 'next_level_score' ] ) )
+	{
+		return 1;
+	}
+
 	$ScoreTable =
 	[
 		0,       // Level 1
@@ -527,6 +551,7 @@ function GetPlanetState( $Planet, $RandomizeZone, $WaitTime )
 	$MediumZones = 0;
 	$LowZones = 0;
 	$BossZones = [];
+	$HalfZones = [];
 
 	foreach( $Zones as &$Zone )
 	{
@@ -549,6 +574,12 @@ function GetPlanetState( $Planet, $RandomizeZone, $WaitTime )
 		if( $Zone[ 'type' ] == 4 && $Zone[ 'boss_active' ] )
 		{
 			$BossZones[] = $Zone;
+		}
+		// It appears that bosses like to spawn when a random zone gets over 50% capture progress
+		// So we will target fresh zones to bring them up to speed
+		else if( $Zone[ 'capture_progress' ] < 0.45 )
+		{
+			$HalfZones[] = $Zone;
 		}
 
 		$Cutoff = ( $Zone[ 'difficulty' ] < 2 && !$RandomizeZone ) ? 0.90 : 0.99;
@@ -575,6 +606,7 @@ function GetPlanetState( $Planet, $RandomizeZone, $WaitTime )
 	if( !empty( $BossZones ) )
 	{
 		$CleanZones = $BossZones;
+		goto bossLabel;
 	}
 	else if( count( $CleanZones ) < 2 )
 	{
@@ -583,6 +615,11 @@ function GetPlanetState( $Planet, $RandomizeZone, $WaitTime )
 
 	if( $RandomizeZone )
 	{
+		if( count( $HalfZones ) > 3 )
+		{
+			$CleanZones = $HalfZones;
+		}
+
 		shuffle( $CleanZones );
 	}
 	else
@@ -599,6 +636,7 @@ function GetPlanetState( $Planet, $RandomizeZone, $WaitTime )
 		} );
 	}
 
+bossLabel:
 	return [
 		'high_zones' => $HighZones,
 		'medium_zones' => $MediumZones,
@@ -615,6 +653,12 @@ function GetBestPlanetAndZone( $RandomizeZone, $WaitTime, $FailSleep )
 
 	if( empty( $Planets[ 'response' ][ 'planets' ] ) )
 	{
+		if( isset( $Planets[ 'response' ][ 'game_version' ] ) )
+		{
+			Msg( '{green}There are no active planets left! Good game!' );
+			exit( 0 );
+		}
+
 		return null;
 	}
 
