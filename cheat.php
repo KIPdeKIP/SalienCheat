@@ -439,7 +439,7 @@ do
 			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
 
-		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Data[ 'next_level_score' ], $Time );
+		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Time );
 	}
 }
 while( true );
@@ -517,7 +517,7 @@ function GetNextLevelProgress( $Data )
 	return ( $Data[ 'new_score' ] - $ScoreTable[ $PreviousLevel ] ) / ( $Data[ 'next_level_score' ] - $ScoreTable[ $PreviousLevel ] );
 }
 
-function SetTitle( $Level, $Score, $NextLevelScore, $Time )
+function SetTitle( $Level, $Score, $Time )
 {
 	if (!function_exists('cli_set_process_title'))
 	{
@@ -894,10 +894,10 @@ function LeaveCurrentGame( $WaitTime, $Token, $LeaveCurrentPlanet = [ 'id' => 0 
 	if( !isset( $Time ) )
 	{
 		$WaitTimeSeconds = $WaitTime / 60;
-		$Time = ( ( $Data[ 'response' ][ 'next_level_score' ] - $Data[ 'response' ][ 'score' ] ) / GetScoreForZone( isset( $LeaveCurrentPlanet[ 'best_zone' ] ) ? $LeaveCurrentPlanet[ 'best_zone' ] : [ 'difficulty' => 3 ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
+		$Time = isset( $Data[ 'response' ][ 'next_level_score' ] ) ? ( ( $Data[ 'response' ][ 'next_level_score' ] - $Data[ 'response' ][ 'score' ] ) / GetScoreForZone( isset( $LeaveCurrentPlanet[ 'best_zone' ] ) ? $LeaveCurrentPlanet[ 'best_zone' ] : [ 'difficulty' => 3 ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds : 0;
 	}
 
-	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Data[ 'response' ][ 'next_level_score' ], $Time );
+	SetTitle( $Data[ 'response' ][ 'level' ], $Data[ 'response' ][ 'score' ], $Time );
 
 	if( !isset( $Data[ 'response' ][ 'active_planet' ] ) )
 	{
