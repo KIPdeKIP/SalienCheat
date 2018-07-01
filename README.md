@@ -20,8 +20,8 @@ If you're not yet running PowerShell 3.0 please download [Windows Management Fra
 
 You can also provide token directly in CLI, to ease running multiple accounts:
 ```
-php cheat.php token1 accoundid1
-php cheat.php token2 accoundid2
+php cheat.php token1 accountid1
+php cheat.php token2 accountid2
 ```
 
 ## License
