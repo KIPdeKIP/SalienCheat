@@ -807,7 +807,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 				$Planet[ 'medium_zones' ],
 				$Planet[ 'low_zones' ],
 				number_format( $Planet[ 'state' ][ 'current_players' ] ),
-				$Planet[ 'state' ][ 'name' ],
+				strlen( $Planet[ 'state' ][ 'name' ] ) > 16 ? trim( substr( $Planet[ 'state' ][ 'name' ], 0, 16 ) ) . '…' : $Planet[ 'state' ][ 'name' ],
 			]
 		);
 
@@ -857,7 +857,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 	$Planet = $Planets[ 0 ];
 
 	Msg(
-		'>> Next Zone is {yellow}' . $Planet[ 'best_zone' ][ 'zone_position' ] .
+		'>> Next Zone is {yellow}' . ( strlen( $Planet[ 'best_zone' ][ 'zone_position' ] ) > 31 ? trim( substr( $Planet[ 'best_zone' ][ 'zone_position' ], 0, 31 ) ) . '…' : $Planet[ 'best_zone' ][ 'zone_position' ] ) .
 		'{normal} (Captured: {yellow}' . number_format( $Planet[ 'best_zone' ][ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Planet[ 'best_zone' ] ) .
 		'{normal}) on Planet {green}' . $Planet[ 'id' ] .
