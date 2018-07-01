@@ -273,6 +273,7 @@ do
 			if( $Data[ 'response' ][ 'game_over' ] )
 			{
 				Msg( '{green}@@ Boss battle is over.' );
+				echo PHP_EOL;
 
 				$BestPlanetAndZone = 0;
 				$LastKnownPlanet = 0;
