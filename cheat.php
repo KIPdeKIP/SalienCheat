@@ -463,7 +463,7 @@ do
 		Msg(
 			'>> Next Level: {yellow}' . ( isset( $Data[ 'next_level_score' ] ) ? number_format( $Data[ 'next_level_score' ] ) : 0 ) .
 			'{normal} XP - Remaining: {yellow}' . ( isset( $Data[ 'next_level_score' ] ) ? number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) : 0 ) .
-			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
+			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . ( $Time < 1 ? 'Now' : date_format( $Date , "jS H:i T" ) ) . ')'
 		);
 
 		SetTitle( $Data[ 'new_level' ], $Data[ 'new_score' ], $Time );
@@ -560,7 +560,7 @@ function SetTitle( $Level, $Score, $Time )
 	@cli_set_process_title(
 		'Level ' . $Level .
 		' (' . number_format( $Score ) . ' XP)' .
-		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
+		' - ETA: ' . $Hours . 'h ' . $Minutes . 'm (' . ( $Time < 1 ? 'Now' : date_format( $Date , "jS H:i T" ) ) . ')'
 	);
 }
 
