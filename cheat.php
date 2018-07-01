@@ -200,18 +200,12 @@ do
 			{
 				Msg( '{green}@@ Got invalid state, restarting...' );
 
-				$BestPlanetAndZone = 0;
-				$LastKnownPlanet = 0;
-
 				break;
 			}
 
 			if( $Data[ 'eresult' ] != 1 && $BossFailsAllowed-- < 1 )
 			{
 				Msg( '{green}@@ Boss battle errored too much, restarting...' );
-
-				$BestPlanetAndZone = 0;
-				$LastKnownPlanet = 0;
 
 				break;
 			}
@@ -290,9 +284,6 @@ do
 				Msg( '{green}@@ Boss battle is over.' );
 				echo PHP_EOL;
 
-				$BestPlanetAndZone = 0;
-				$LastKnownPlanet = 0;
-
 				break;
 			}
 
@@ -303,6 +294,10 @@ do
 			echo PHP_EOL;
 		}
 		while( BossSleep( $c ) );
+
+		// Boss battle is over, reset state and scan again
+		$BestPlanetAndZone = 0;
+		$LastKnownPlanet = 0;
 
 		$Data = SendPOST( 'ITerritoryControlMinigameService/GetPlayerInfo', 'access_token=' . $Token );
 
