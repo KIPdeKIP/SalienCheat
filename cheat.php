@@ -170,6 +170,7 @@ do
 		$BossFailsAllowed = 10;
 		$NextHeal = PHP_INT_MAX;
 		$WaitingForPlayers = true;
+		$MyScoreInBoss = 0;
 
 		do
 		{
@@ -228,7 +229,7 @@ do
 			// Strip names down to basic ASCII.
 			$RegMask = '/[\x00-\x1F\x7F-\xFF]/';
 
-			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use ( $AccountID, $RegMask )
+			usort( $Data[ 'response' ][ 'boss_status' ][ 'boss_players' ], function( $a, $b ) use( $AccountID )
 			{
 				if( $a[ 'accountid' ] == $AccountID )
 				{
@@ -239,7 +240,7 @@ do
 					return -1;
 				}
 
-				return strcmp( preg_replace( $RegMask, '', $a['name'] ), preg_replace( $RegMask, '', $b['name'] ) );
+				return $b[ 'accountid' ] - $a[ 'accountid' ];
 			} );
 
 			$MyPlayer = null;
@@ -254,12 +255,14 @@ do
 					$MyPlayer = $Player;
 				}
 
+				$Name = trim( preg_replace( $RegMask, '', $Player[ 'name' ] ) );
+
 				Msg(
 					( $IsThisMe ? '{green}@@' : '  ' ) .
 					' %-20s - HP: {yellow}%6s' . $DefaultColor  . ' / %6s - XP Gained: {yellow}%10s' . $DefaultColor,
 					PHP_EOL,
 					[
-						substr( preg_replace( $RegMask, '', $Player[ 'name' ] ), 0, 20 ),
+						empty( $Name ) ? ( '[U:1:' . $Player[ 'accountid' ] . ']' ) : substr( $Name, 0, 20 ),
 						$Player[ 'hp' ],
 						$Player[ 'max_hp' ],
 						number_format( $Player[ 'xp_earned' ] )
@@ -279,7 +282,9 @@ do
 
 			if( $MyPlayer !== null )
 			{
-				Msg( '@@ Started XP: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' {teal}(L' . $MyPlayer[ 'level_on_join' ] . '){normal} - Current XP: {yellow}' . number_format( $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ] ) . ' ' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{green}' : '{teal}' ) . '(L' . $MyPlayer[ 'new_level' ] . ')' );
+				$MyScoreInBoss = $MyPlayer[ 'score_on_join' ] + $MyPlayer[ 'xp_earned' ];
+
+				Msg( '@@ Started XP: ' . number_format( $MyPlayer[ 'score_on_join' ] ) . ' {teal}(L' . $MyPlayer[ 'level_on_join' ] . '){normal} - Current XP: {yellow}' . number_format( $MyScoreInBoss ) . ' ' . ( $MyPlayer[ 'level_on_join' ] != $MyPlayer[ 'new_level' ] ? '{green}' : '{teal}' ) . '(L' . $MyPlayer[ 'new_level' ] . ')' );
 			}
 
 			Msg( '@@ Boss HP: {green}' . number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_hp' ] ) . '{normal} / {lightred}' .  number_format( $Data[ 'response' ][ 'boss_status' ][ 'boss_max_hp' ] ) . '{normal} - Lasers: {yellow}' . $Data[ 'response' ][ 'num_laser_uses' ] . '{normal} - Team Heals: {green}' . $Data[ 'response' ][ 'num_team_heals' ] );
@@ -293,12 +298,12 @@ do
 		if( isset( $Data[ 'response' ][ 'score' ] ) )
 		{
 			Msg(
-				'++ Your Score after Boss battle: {lightred}' . number_format( $Data[ 'score' ] ) .
-				'{yellow} (+' . number_format( $Data[ 'score' ] - $OldScore ) . ')' .
-				'{normal} - Level: {green}' . $Data[ 'level' ]
+				'++ Your Score after Boss battle: {lightred}' . number_format( $MyScoreInBoss ) .
+				'{yellow} (+' . number_format( $MyScoreInBoss - $OldScore ) . ')' .
+				'{normal} - Level: {green}' . $Data[ 'response' ][ 'level' ]
 			);
- 
-			$OldScore = $Data[ 'response' ][ 'score' ];
+
+			$OldScore = $MyScoreInBoss;
 		}
 
 		if( isset( $Data[ 'response' ][ 'active_boss_game' ] ) )
