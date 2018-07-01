@@ -453,7 +453,7 @@ do
 
 		$OldScore = $Data[ 'new_score' ];
 		$WaitTimeSeconds = $WaitTime / 60;
-		$Time = ( ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => $Zone[ 'difficulty' ] ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds;
+		$Time = isset( $Data[ 'next_level_score' ] ) ? ( ( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) / GetScoreForZone( [ 'difficulty' => $Zone[ 'difficulty' ] ] ) * $WaitTimeSeconds ) + $WaitTimeSeconds : 0;
 		$Hours = floor( $Time / 60 );
 		$Minutes = $Time % 60;
 		$Date = date_create();
@@ -461,8 +461,8 @@ do
 		date_add( $Date, date_interval_create_from_date_string( $Hours . " hours + " . $Minutes . " minutes" ) );
 
 		Msg(
-			'>> Next Level: {yellow}' . number_format( $Data[ 'next_level_score' ] ) .
-			'{normal} XP - Remaining: {yellow}' . number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) .
+			'>> Next Level: {yellow}' . ( isset( $Data[ 'next_level_score' ] ) ? number_format( $Data[ 'next_level_score' ] ) : 0 ) .
+			'{normal} XP - Remaining: {yellow}' . ( isset( $Data[ 'next_level_score' ] ) ? number_format( $Data[ 'next_level_score' ] - $Data[ 'new_score' ] ) : 0 ) .
 			'{normal} XP - ETA: {green}' . $Hours . 'h ' . $Minutes . 'm (' . date_format( $Date , "jS H:i T" ) . ')'
 		);
 
