@@ -446,6 +446,11 @@ function CheckGameVersion( $Data )
 
 function GetNextLevelProgress( $Data )
 {
+	if( !isset( $Data[ 'next_level_score' ] ) )
+	{
+		return 1;
+	}
+
 	$ScoreTable =
 	[
 		0,       // Level 1
