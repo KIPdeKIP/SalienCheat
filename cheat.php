@@ -823,6 +823,9 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 			$Planet[ 'best_zone' ] = $Zone[ 'best_zone' ];
 		}
 
+		$ConsoleWidth = getConsoleMode()[0];
+		$ConsoleWidth = $ConsoleWidth < 120 ? 120 : $ConsoleWidth;
+
 		Msg(
 			'>> Planet {green}%3d{normal} - Captured: {green}%5s%%{normal} - High: {yellow}%2d{normal} - Medium: {yellow}%2d{normal} - Low: {yellow}%2d{normal} - Players: {yellow}%7s {green}(%s)',
 			PHP_EOL,
@@ -833,7 +836,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 				$Planet[ 'medium_zones' ],
 				$Planet[ 'low_zones' ],
 				number_format( $Planet[ 'state' ][ 'current_players' ] ),
-				strlen( $Planet[ 'state' ][ 'name' ] ) > 16 ? trim( substr( $Planet[ 'state' ][ 'name' ], 0, 16 ) ) . '…' : $Planet[ 'state' ][ 'name' ],
+				strlen( $Planet[ 'state' ][ 'name' ] ) > $ConsoleWidth - 104 ? trim( substr( $Planet[ 'state' ][ 'name' ], 0, $ConsoleWidth - 104 ) ) . '…' : $Planet[ 'state' ][ 'name' ],
 			]
 		);
 
@@ -882,8 +885,11 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 
 	$Planet = $Planets[ 0 ];
 
+	$ConsoleWidth = getConsoleMode()[0];
+	$ConsoleWidth = $ConsoleWidth < 120 ? 120 : $ConsoleWidth;
+
 	Msg(
-		'>> Next Zone is {yellow}' . ( strlen( $Planet[ 'best_zone' ][ 'zone_position' ] ) > 31 ? trim( substr( $Planet[ 'best_zone' ][ 'zone_position' ], 0, 31 ) ) . '…' : $Planet[ 'best_zone' ][ 'zone_position' ] ) .
+		'>> Next Zone is {yellow}' . ( strlen( $Planet[ 'best_zone' ][ 'zone_position' ] ) > $ConsoleWidth - 89 ? trim( substr( $Planet[ 'best_zone' ][ 'zone_position' ], 0, $ConsoleWidth - 89 ) ) . '…' : $Planet[ 'best_zone' ][ 'zone_position' ] ) .
 		'{normal} (Captured: {yellow}' . number_format( $Planet[ 'best_zone' ][ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Planet[ 'best_zone' ] ) .
 		'{normal}) on Planet {green}' . $Planet[ 'id' ] .
@@ -1125,6 +1131,43 @@ function GetAccountID( $SteamID )
 	}
 
 	return 0;
+}
+
+function getConsoleMode()
+{
+	if( strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' )
+	{
+		if ( !function_exists('proc_open') )
+		{
+			// Default values on Windows 10
+			return [120, 9001];
+		}
+
+		$descriptorspec = array(
+			1 => array( 'pipe', 'w' ),
+			2 => array( 'pipe', 'w' ),
+		);
+
+		$process = proc_open( 'mode CON', $descriptorspec, $pipes, null, null, array( 'suppress_errors' => true ) );
+
+		if (is_resource($process))
+		{
+			$info = stream_get_contents( $pipes[1] );
+			fclose( $pipes[1] );
+			fclose( $pipes[2] );
+			proc_close( $process );
+
+			if ( preg_match( '/--------+\r?\n.+?(\d+)\r?\n.+?(\d+)\r?\n/', $info, $matches ) )
+			{
+				return array( (int)$matches[2], (int)$matches[1] );
+			}
+		}
+	}
+	else
+	{
+		// TODO: Implement this for non-Windows machines
+	}
+	return [120, 9001];
 }
 
 function Msg( $Message, $EOL = PHP_EOL, $printf = [] )
