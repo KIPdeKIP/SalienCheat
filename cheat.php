@@ -97,7 +97,7 @@ else
 }
 
 $GameVersion = 2;
-$ScriptVersion = '1.4';
+$ScriptVersion = '1.5';
 $WaitTime = 110;
 $ZonePaces = [];
 $OldScore = 0;
