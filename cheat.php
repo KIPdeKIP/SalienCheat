@@ -917,11 +917,11 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 	$ConsoleWidth = $ConsoleWidth < 120 ? 120 : $ConsoleWidth;
 
 	Msg(
-		'>> Next Zone is {yellow}' . ( strlen( $Planet[ 'best_zone' ][ 'zone_position' ] ) > $ConsoleWidth - 89 ? trim( substr( $Planet[ 'best_zone' ][ 'zone_position' ], 0, $ConsoleWidth - 89 ) ) . '…' : $Planet[ 'best_zone' ][ 'zone_position' ] ) .
+		'>> Next Zone is {yellow}' . $Planet[ 'best_zone' ][ 'zone_position' ] .
 		'{normal} (Captured: {yellow}' . number_format( $Planet[ 'best_zone' ][ 'capture_progress' ] * 100, 2 ) . '%' .
 		'{normal} - Difficulty: {yellow}' . GetNameForDifficulty( $Planet[ 'best_zone' ] ) .
 		'{normal}) on Planet {green}' . $Planet[ 'id' ] .
-		' (' . $Planet[ 'state' ][ 'name' ] . ')'
+		' (' . ( strlen( $Planet[ 'state' ][ 'name' ] ) > $ConsoleWidth - 89 ? trim( substr( $Planet[ 'state' ][ 'name' ], 0, $ConsoleWidth - 89 ) ) . '…' : $Planet[ 'state' ][ 'name' ] ) . ')'
 	);
 
 	return $Planet;
