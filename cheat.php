@@ -15,7 +15,8 @@ if( !function_exists( 'random_int' ) )
 
 if( !file_exists( __DIR__ . '/cacert.pem' ) )
 {
-	echo 'You forgot to download cacert.pem file';
+	echo 'You forgot to download cacert.pem file', PHP_EOL;
+	pause();
 	exit( 1 );
 }
 
@@ -48,13 +49,21 @@ else if( isset( $_SERVER[ 'TOKEN' ] ) )
 else
 {
 	// otherwise, read it from disk
+	if( !file_exists( __DIR__ . '/gettoken.json' ) )
+	{
+		echo 'Missing gettoken.json', PHP_EOL;
+		echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page in its entirety into this folder as gettoken.json', PHP_EOL;
+		pause();
+		exit( 1 );
+	}
+
 	$Token = trim( file_get_contents( __DIR__ . '/gettoken.json' ) );
 	$ParsedToken = json_decode( $Token, true );
 
 	if( $ParsedToken === null ) {
-		echo PHP_EOL;
 		echo 'Invalid format in gettoken.json', PHP_EOL;
-		echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page IN ITS ENTIRETY into this folder as gettoken.json';
+		echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page IN ITS ENTIRETY into this folder as gettoken.json', PHP_EOL;
+		pause();
 		exit( 1 );
 	}
 
@@ -80,9 +89,9 @@ else
 
 if( strlen( $Token ) !== 32 )
 {
-	echo PHP_EOL;
-	echo 'Missing gettoken.json', PHP_EOL;
-	echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page in its entirety into this folder as gettoken.json';
+	echo 'Invalid format in gettoken.json', PHP_EOL;
+	echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page IN ITS ENTIRETY into this folder as gettoken.json', PHP_EOL;
+	pause();
 	exit( 1 );
 }
 
@@ -1203,6 +1212,41 @@ function getConsoleMode()
 		// TODO: Implement this for non-Windows machines
 	}
 	return [120, 9001];
+}
+
+function pause()
+{
+	if( strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' )
+	{
+		if ( !function_exists('proc_open') )
+		{
+			return;
+		}
+
+		$descriptorspec = array(
+			1 => array( 'pipe', 'w' ),
+			2 => array( 'pipe', 'w' ),
+		);
+
+		$process = proc_open( 'pause', $descriptorspec, $pipes, null, null, array( 'suppress_errors' => true ) );
+
+		if (is_resource($process))
+		{
+			echo 'Press any key to continue . . .', PHP_EOL;
+
+			$info = stream_get_contents( $pipes[1] );
+			fclose( $pipes[1] );
+			fclose( $pipes[2] );
+			proc_close( $process );
+
+			return;
+		}
+	}
+	else
+	{
+		// TODO: Implement this for non-Windows machines
+	}
+	return;
 }
 
 function Msg( $Message, $EOL = PHP_EOL, $printf = [] )

@@ -10,7 +10,8 @@ if not exist php.exe (
 if not exist gettoken.json (
 	echo Missing gettoken.json
 	echo Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page in its entirety into this folder as gettoken.json
-	pause
+	echo Press any key to continue . . .
+	pause >nul
 )
 
 echo The script can be terminated at any time by pressing Ctrl-C
