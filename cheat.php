@@ -51,6 +51,13 @@ else
 	$Token = trim( file_get_contents( __DIR__ . '/gettoken.json' ) );
 	$ParsedToken = json_decode( $Token, true );
 
+	if( $ParsedToken === null ) {
+		echo PHP_EOL;
+		echo 'Invalid format in gettoken.json', PHP_EOL;
+		echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page IN ITS ENTIRETY into this folder as gettoken.json';
+		exit( 1 );
+	}
+
 	if( is_string( $ParsedToken ) )
 	{
 		$Token = $ParsedToken;
@@ -74,7 +81,7 @@ else
 if( strlen( $Token ) !== 32 )
 {
 	echo PHP_EOL;
-	echo 'Missing gettoken.json';
+	echo 'Missing gettoken.json', PHP_EOL;
 	echo 'Please navigate to https://steamcommunity.com/saliengame/gettoken and save the page in its entirety into this folder as gettoken.json';
 	exit( 1 );
 }
