@@ -814,6 +814,7 @@ function GetBestPlanetAndZone( &$ZonePaces, $PreferLowZones, $WaitTime )
 		if( isset( $Planets[ 'response' ][ 'game_version' ] ) )
 		{
 			Msg( '{green}There are no active planets left! Good game!' );
+			pause();
 			exit( 0 );
 		}
 
